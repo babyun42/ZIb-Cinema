@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zib Cinema - Умный поиск и просмотр</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        m3: {
+                            surface: '#141218',
+                            surfaceDim: '#141218',
+                            surfaceBright: '#3b383e',
+                            surfaceContainerLowest: '#0f0d13',
+                            surfaceContainerLow: '#1d1b20',
+                            surfaceContainer: '#211f26',
+                            surfaceContainerHigh: '#2b2930',
+                            surfaceContainerHighest: '#36343b',
+                            primary: '#d0bcff',
+                            onPrimary: '#381e72',
+                            primaryContainer: '#4f378b',
+                            onPrimaryContainer: '#eaddff',
+                            secondary: '#ccc2dc',
+                            onSecondary: '#332d41',
+                            outline: '#938f99',
+                            outlineVariant: '#49454f'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Roboto', 'Inter', 'sans-serif']
+                    },
+                    borderRadius: {
+                        '4xl': '2rem'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- FontAwesome & Hls.js CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1d1b20; }
+        ::-webkit-scrollbar-thumb { background: #49454f; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #938f99; }
+        
+        .m3-slider {
+            -webkit-appearance: none; appearance: none; height: 6px;
+            background: #49454f; border-radius: 9999px; outline: none; cursor: pointer;
+        }
+        .m3-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none; width: 16px; height: 16px;
+            border-radius: 50%; background: #d0bcff; cursor: pointer; transition: transform 0.15s ease;
+        }
+        .m3-slider::-webkit-slider-thumb:hover { transform: scale(1.25); }
+
+        /* Smooth reveal animation for search items */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-down { animation: fadeInDown 0.2s ease-out forwards; }
+        
+        /* Скрытие скроллбара для горизонтальных списков (слайдеров) */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Плавное появление секций-страниц при переключении вкладок */
+        .view-anim.view-enter-right { opacity: 0; transform: translateX(28px); }
+        .view-anim.view-enter-left { opacity: 0; transform: translateX(-28px); }
+    </style>
+</head>
+<body class="bg-m3-surface text-white min-h-screen flex flex-col font-sans antialiased selection:bg-m3-primaryContainer selection:text-m3-onPrimaryContainer overflow-x-hidden">
+
+    <!-- Top Navigation Bar -->
+    <header class="sticky top-0 z-40 bg-m3-surfaceContainer/90 backdrop-blur-md border-b border-m3-outlineVariant/30 px-4 lg:px-8 py-3">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            
+            <!-- Logo & Title -->
+            <div class="flex items-center justify-between w-full md:w-auto">
+                <div class="flex items-center gap-3 cursor-pointer group" onclick="switchNavTab('home')">
+                    <div class="w-10 h-10 rounded-2xl bg-m3-primaryContainer text-m3-onPrimaryContainer flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
+                        <i class="fa-solid fa-play text-lg ml-0.5"></i>
+                    </div>
+                    <span class="text-xl font-bold tracking-wide text-white">
+                        Zib <span class="text-m3-primary font-black">Cinema</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Material 3 Navigation Tabs (Removed Catalog and Search) -->
+            <nav class="relative flex items-center justify-center gap-1 sm:gap-2 bg-transparent p-1.5 rounded-full text-xs sm:text-sm font-medium z-0">
+                <div id="nav-indicator" class="absolute top-1.5 bottom-1.5 bg-m3-primaryContainer rounded-full transition-all duration-300 ease-in-out -z-10 shadow-sm" style="width: 0px; left: 0px;"></div>
+
+                <button onclick="switchNavTab('home')" id="nav-btn-home" class="nav-tab-btn active px-4 py-2 rounded-full transition-colors duration-300 flex items-center gap-2 text-m3-onPrimaryContainer font-bold">
+                    <i class="fa-solid fa-house"></i> <span>Главная</span>
+                </button>
+                <button onclick="switchNavTab('popular')" id="nav-btn-popular" class="nav-tab-btn px-4 py-2 rounded-full transition-colors duration-300 flex items-center gap-2 text-m3-secondary hover:text-white">
+                    <i class="fa-solid fa-fire text-amber-400"></i> <span>Популярное</span>
+                </button>
+                <button onclick="switchNavTab('collections')" id="nav-btn-collections" class="nav-tab-btn px-4 py-2 rounded-full transition-colors duration-300 flex items-center gap-2 text-m3-secondary hover:text-white">
+                    <i class="fa-solid fa-layer-group text-purple-400"></i> <span>Подборки</span>
+                </button>
+                <button onclick="switchNavTab('profile')" id="nav-btn-profile" class="nav-tab-btn px-4 py-2 rounded-full transition-colors duration-300 flex items-center gap-2 text-m3-secondary hover:text-white">
+                    <i class="fa-solid fa-user"></i> <span>Профиль</span>
+                </button>
+            </nav>
+
+            <!-- Smart Search Bar (Live Autocomplete) -->
+            <div class="relative w-full md:w-80 group">
+                <input type="text" id="search-input" placeholder="Название фильма или ID..." 
+                       oninput="handleLiveSearch(this.value)"
+                       onkeydown="if(event.key==='Enter') executeDirectSearch()"
+                       onfocus="document.getElementById('search-suggestions').classList.remove('hidden')"
+                       class="w-full bg-m3-surfaceContainerLow border border-m3-outlineVariant/40 text-xs rounded-full py-2 pl-9 pr-8 text-white placeholder:text-m3-outline focus:outline-none focus:border-m3-primary focus:bg-m3-surfaceContainerHigh transition-all">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-2.5 text-m3-outline text-xs"></i>
+                <button onclick="executeDirectSearch()" class="absolute right-2 top-1.5 text-m3-primary hover:text-white text-xs px-1.5 py-0.5">
+                    <i id="search-btn-icon" class="fa-solid fa-arrow-right"></i>
+                </button>
+
+                <!-- Floating Suggestions Dropdown -->
+                <div id="search-suggestions" class="absolute top-full left-0 right-0 mt-2 bg-m3-surfaceContainerHigh/95 backdrop-blur-xl border border-m3-outlineVariant/40 rounded-2xl shadow-2xl z-50 hidden max-h-80 overflow-y-auto overflow-x-hidden flex-col">
+                    <div id="suggestions-container" class="p-2 space-y-1">
+                        <!-- Live suggestions will be injected here -->
+                        <div class="text-xs text-m3-outline p-3 text-center">Начните вводить название...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Body -->
+    <main class="max-w-7xl mx-auto px-4 lg:px-8 py-6 space-y-8 min-h-[70vh]" id="main-content">
+
+        <!-- VIEW 1: HOME (Главная с горизонтальными списками) -->
+        <section id="home-view" class="view-anim transition-all duration-300 ease-out space-y-10">
+            <!-- Popular Slider -->
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-bold text-white tracking-wide flex items-center gap-2">
+                        <i class="fa-solid fa-fire text-amber-400"></i> Популярное сейчас
+                    </h2>
+                    <button onclick="switchNavTab('popular')" class="text-xs text-m3-primary hover:text-white transition-colors">Смотреть топ-100 <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></button>
+                </div>
+                <!-- Контейнер для горизонтального скролла со стрелками -->
+                <div class="relative group/slider">
+                    <button onclick="scrollSlider('home-popular-slider', -1)" class="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 sm:w-10 sm:h-10 bg-black/80 hover:bg-m3-primary hover:text-m3-onPrimary rounded-full text-white flex items-center justify-center opacity-0 group-hover/slider:opacity-100 transition-all duration-300 backdrop-blur-md border border-white/10 shadow-lg cursor-pointer"><i class="fa-solid fa-chevron-left text-sm sm:text-base"></i></button>
+                    
+                    <div class="flex overflow-x-auto gap-4 pt-1 pb-4 hide-scrollbar snap-x snap-mandatory scroll-smooth" id="home-popular-slider">
+                        <!-- Заполняется через JS -->
+                        <div class="text-sm text-m3-outline"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Загрузка новинок...</div>
+                    </div>
+                    
+                    <button onclick="scrollSlider('home-popular-slider', 1)" class="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 sm:w-10 sm:h-10 bg-black/80 hover:bg-m3-primary hover:text-m3-onPrimary rounded-full text-white flex items-center justify-center opacity-0 group-hover/slider:opacity-100 transition-all duration-300 backdrop-blur-md border border-white/10 shadow-lg cursor-pointer"><i class="fa-solid fa-chevron-right text-sm sm:text-base"></i></button>
+                </div>
+            </div>
+
+            <!-- History Slider (История просмотров) -->
+            <div class="space-y-4" id="history-section">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-bold text-white tracking-wide flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-blue-400"></i> Вы смотрели
+                    </h2>
+                    <button onclick="clearHistory()" class="text-[10px] text-m3-outline hover:text-red-400 transition-colors uppercase tracking-wider font-bold">Очистить</button>
+                </div>
+                <!-- Контейнер для истории со стрелками -->
+                <div class="relative group/slider">
+                    <button onclick="scrollSlider('home-history-slider', -1)" class="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 sm:w-10 sm:h-10 bg-black/80 hover:bg-m3-primary hover:text-m3-onPrimary rounded-full text-white flex items-center justify-center opacity-0 group-hover/slider:opacity-100 transition-all duration-300 backdrop-blur-md border border-white/10 shadow-lg cursor-pointer"><i class="fa-solid fa-chevron-left text-sm sm:text-base"></i></button>
+                    
+                    <div class="flex overflow-x-auto gap-4 pt-1 pb-4 hide-scrollbar snap-x snap-mandatory scroll-smooth" id="home-history-slider">
+                        <!-- Заполняется через JS из localStorage -->
+                    </div>
+
+                    <button onclick="scrollSlider('home-history-slider', 1)" class="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 sm:w-10 sm:h-10 bg-black/80 hover:bg-m3-primary hover:text-m3-onPrimary rounded-full text-white flex items-center justify-center opacity-0 group-hover/slider:opacity-100 transition-all duration-300 backdrop-blur-md border border-white/10 shadow-lg cursor-pointer"><i class="fa-solid fa-chevron-right text-sm sm:text-base"></i></button>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 1.5: POPULAR GRID (Топ 100 Каталог) -->
+        <section id="popular-view" class="view-anim transition-all duration-300 ease-out hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-bold text-white tracking-wide flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-trend-up text-m3-primary"></i> Топ 100 Популярных фильмов
+                </h2>
+                <span class="text-xs text-m3-outline bg-m3-surfaceContainer px-3 py-1 rounded-full" id="catalog-count-label">
+                    Загрузка...
+                </span>
+            </div>
+
+            <!-- Сетка фильмов -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-5" id="movies-grid-container">
+                <!-- Заполняется через JS -->
+            </div>
+        </section>
+
+        <!-- VIEW 2: PLAYER VIEW -->
+        <section id="player-view" class="view-anim transition-all duration-300 ease-out hidden space-y-6">
+            
+            <!-- Player Toolbar -->
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <button onclick="showCatalogView()" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-m3-surfaceContainerHigh hover:bg-m3-surfaceHighest text-m3-onPrimaryContainer border border-m3-outlineVariant/40 transition-colors text-xs font-medium">
+                        <i class="fa-solid fa-arrow-left"></i> Назад
+                    </button>
+                    <span class="hidden sm:inline-block text-xs text-m3-outline bg-m3-surfaceContainer px-3 py-1.5 rounded-full border border-m3-outlineVariant/20">
+                        ID: <strong class="text-m3-primary font-mono" id="current-player-kp-id">...</strong>
+                    </span>
+                </div>
+                
+                <!-- Player Selector Drawer Menu -->
+                <div class="relative ml-auto">
+                    <button onclick="togglePlayerSelectMenu()" id="player-selector-tab-btn" class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-m3-surfaceContainerHigh hover:bg-m3-surfaceHighest text-white font-medium text-xs transition-all border border-m3-outlineVariant/30">
+                        <i class="fa-solid fa-server text-m3-primary"></i>
+                        <span id="active-player-name-badge">Villybizy</span>
+                        <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200" id="player-selector-arrow"></i>
+                    </button>
+
+                    <div id="player-selector-dropdown" class="absolute right-0 mt-2 w-64 bg-m3-surfaceContainerHighest/95 backdrop-blur-xl border border-m3-outlineVariant/40 rounded-2xl shadow-2xl p-2 z-50 hidden flex-col space-y-1 transition-all">
+                        <div class="text-[10px] font-bold text-m3-outline uppercase tracking-wider px-2 py-1">Резервные плееры:</div>
+                        
+                        <button onclick="setPlayerMode('external_villybizy')" id="btn-mode-external_villybizy" class="tab-btn w-full text-left px-3 py-2 rounded-xl hover:bg-m3-primaryContainer hover:text-m3-onPrimaryContainer transition-all flex items-center justify-between group">
+                            <span class="text-xs font-medium flex items-center gap-2"><i class="fa-solid fa-bolt text-emerald-400"></i> Villybizy (Осн.)</span>
+                            <i class="fa-solid fa-check text-m3-primary text-xs hidden check-icon"></i>
+                        </button>
+                        <button onclick="setPlayerMode('external_collaps')" id="btn-mode-external_collaps" class="tab-btn w-full text-left px-3 py-2 rounded-xl hover:bg-m3-primaryContainer hover:text-m3-onPrimaryContainer transition-all flex items-center justify-between group">
+                            <span class="text-xs font-medium flex items-center gap-2"><i class="fa-solid fa-server text-amber-400"></i> Collaps CDN</span>
+                            <i class="fa-solid fa-check text-m3-primary text-xs hidden check-icon"></i>
+                        </button>
+                        <button onclick="setPlayerMode('external_videocdn')" id="btn-mode-external_videocdn" class="tab-btn w-full text-left px-3 py-2 rounded-xl hover:bg-m3-primaryContainer hover:text-m3-onPrimaryContainer transition-all flex items-center justify-between group">
+                            <span class="text-xs font-medium flex items-center gap-2"><i class="fa-solid fa-play-circle text-blue-400"></i> VideoCDN</span>
+                            <i class="fa-solid fa-check text-m3-primary text-xs hidden check-icon"></i>
+                        </button>
+                        <button onclick="setPlayerMode('external_kinobox')" id="btn-mode-external_kinobox" class="tab-btn w-full text-left px-3 py-2 rounded-xl hover:bg-m3-primaryContainer hover:text-m3-onPrimaryContainer transition-all flex items-center justify-between group">
+                            <span class="text-xs font-medium flex items-center gap-2"><i class="fa-solid fa-box text-purple-400"></i> Kinobox</span>
+                            <i class="fa-solid fa-check text-m3-primary text-xs hidden check-icon"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Player Frame -->
+            <div class="bg-m3-surfaceContainer rounded-3xl p-1 sm:p-2 border border-m3-outlineVariant/30 shadow-2xl">
+                <div class="relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-inner group" id="player-wrapper">
+                    <!-- Iframe injected by JS -->
+                    <div class="absolute inset-0 flex flex-col items-center justify-center text-m3-outline gap-3">
+                        <i class="fa-solid fa-circle-notch fa-spin text-3xl"></i>
+                        <span class="text-xs">Загрузка медиапотока...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Metadata Loaded via API -->
+            <div class="bg-m3-surfaceContainerHigh p-6 sm:p-8 rounded-4xl border border-m3-outlineVariant/30 space-y-4 shadow-lg relative overflow-hidden">
+                <!-- Blurred background decoration -->
+                <div id="meta-bg-blur" class="absolute inset-0 bg-cover bg-center opacity-10 blur-xl scale-110 pointer-events-none"></div>
+                
+                <div class="relative z-10">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-m3-outlineVariant/20 pb-4">
+                        <div>
+                            <h2 class="text-2xl sm:text-3xl font-black text-white" id="player-movie-title">...</h2>
+                            <div class="flex flex-wrap items-center gap-2 text-xs text-m3-secondary mt-2" id="player-movie-meta">
+                                <!-- Meta injected by JS -->
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-sm text-m3-secondary leading-relaxed mt-4 max-w-4xl" id="player-movie-description">
+                        Загрузка описания...
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 3: GENERIC VIEW (For Empty Tabs) -->
+        <section id="generic-view" class="view-anim transition-all duration-300 ease-out hidden bg-m3-surfaceContainer p-10 rounded-4xl text-center space-y-4 border border-m3-outlineVariant/30 mt-10">
+            <div class="w-16 h-16 rounded-full bg-m3-primaryContainer text-m3-onPrimaryContainer mx-auto flex items-center justify-center text-2xl">
+                <i class="fa-solid fa-compass" id="generic-icon"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-white" id="generic-title">Раздел</h2>
+            <p class="text-m3-secondary max-w-md mx-auto text-sm" id="generic-desc">Контент временно недоступен.</p>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-m3-surfaceContainer border-t border-m3-outlineVariant/20 py-6 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-[11px] text-m3-outline space-y-1">
+            <p>Zib Cinema &copy; 2026. Данные предоставлены Kinopoisk API Unofficial.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // API Configuration (Kinopoisk Unofficial)
+        const KP_API_KEY = '8c8e1a50-6322-4135-8875-5d40a5420d86'; 
+        const API_HEADERS = { 'X-API-KEY': KP_API_KEY, 'Content-Type': 'application/json' };
+        
+        const fallbackPoster = 'https://placehold.co/400x600/1d1b20/eaddff?text=Постер+не+найден';
+
+        // Global State
+        const NAV_TAB_ORDER = ['home', 'popular', 'collections', 'profile'];
+        let currentActiveTab = 'home';
+
+        let currentMode = 'external_villybizy'; // По умолчанию Villybizy
+        let activeMovieId = null;
+        let activeMovieType = 'FILM'; // Хранит тип медиа (FILM, TV_SERIES и т.д.)
+        let searchDebounceTimer = null;
+
+        // On Load initialization
+        window.onload = function() {
+            switchNavTab('home');
+            loadHomeData(); 
+            renderHistory(); 
+            
+            // Close suggestions when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.group')) {
+                    document.getElementById('search-suggestions').classList.add('hidden');
+                }
+            });
+        };
+
+        // --- ГЕНЕРАЦИЯ КАРТОЧЕК ---
+        function createMovieCard(movie, isSlider = false) {
+            const mId = movie.kinopoiskId || movie.filmId;
+            const rating = movie.ratingKinopoisk || movie.ratingImdb || movie.rating || '—';
+            const year = movie.year || 'Н/Д';
+            const name = movie.nameRu || movie.nameOriginal || 'Без названия';
+            
+            // Если карточка в слайдере - задаем фиксированную ширину, иначе - резиновую для сетки
+            const widthClass = isSlider ? 'w-36 sm:w-44 shrink-0 snap-start' : 'w-full';
+            
+            return `
+            <div onclick="openMoviePlayer('${mId}')" class="${widthClass} group relative bg-m3-surfaceContainer p-2 sm:p-3 rounded-3xl border border-m3-outlineVariant/20 hover:border-m3-outlineVariant/50 hover:shadow-2xl transition-all duration-300 cursor-pointer shadow-lg flex flex-col justify-between h-full">
+                <div class="relative aspect-[2/3] rounded-2xl overflow-hidden mb-3 bg-m3-surfaceContainerLowest">
+                    <img src="https://st.kp.yandex.net/images/film_big/${mId}.jpg" alt="${name}" 
+                         referrerpolicy="no-referrer"
+                         onerror="this.onerror=null; this.src='${fallbackPoster}';"
+                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    <div class="absolute top-2 right-2 bg-black/80 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] font-bold text-amber-400 border border-white/10 shadow">
+                        ★ ${rating}
+                    </div>
+                    <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <div class="w-12 h-12 rounded-full bg-m3-primary text-m3-onPrimary flex items-center justify-center shadow-xl transform scale-75 group-hover:scale-100 transition-transform">
+                            <i class="fa-solid fa-play ml-0.5"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-grow flex flex-col justify-end">
+                    <h3 class="font-bold text-xs sm:text-sm text-white line-clamp-2 group-hover:text-m3-primary transition-colors leading-tight">${name}</h3>
+                    <div class="flex items-center justify-between text-[10px] sm:text-[11px] text-m3-outline mt-1.5">
+                        <span>${year}</span>
+                    </div>
+                </div>
+            </div>
+            `;
+        }
+
+        // --- ЛОГИКА ВКЛАДОК ---
+
+        // Плавно скрывает секцию-страницу (сразу, без задержки — чтобы не было наложения)
+        function hideMainView(el) {
+            if (!el) return;
+            el.classList.add('hidden');
+        }
+
+        // Плавно показывает секцию-страницу (fade + сдвиг слева или справа)
+        function showMainView(el, direction = 'right') {
+            if (!el) return;
+            el.classList.remove('hidden');
+            const enterClass = direction === 'left' ? 'view-enter-left' : 'view-enter-right';
+            el.classList.add(enterClass);
+            // Форсируем reflow, чтобы браузер зафиксировал стартовое состояние перед анимацией
+            void el.offsetWidth;
+            requestAnimationFrame(() => {
+                el.classList.remove(enterClass);
+            });
+        }
+
+        function switchNavTab(tabName) {
+            document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+                btn.classList.remove('text-m3-onPrimaryContainer', 'font-bold');
+                btn.classList.add('text-m3-secondary');
+            });
+
+            const activeBtn = document.getElementById('nav-btn-' + tabName);
+            const indicator = document.getElementById('nav-indicator');
+
+            if (activeBtn) {
+                activeBtn.classList.add('text-m3-onPrimaryContainer', 'font-bold');
+                activeBtn.classList.remove('text-m3-secondary');
+
+                if (indicator) {
+                    indicator.style.width = activeBtn.offsetWidth + 'px';
+                    indicator.style.left = activeBtn.offsetLeft + 'px';
+                }
+            }
+
+            const fromIndex = NAV_TAB_ORDER.indexOf(currentActiveTab);
+            const toIndex = NAV_TAB_ORDER.indexOf(tabName);
+            const direction = toIndex >= fromIndex ? 'right' : 'left';
+            currentActiveTab = tabName;
+
+            const homeView = document.getElementById('home-view');
+            const popularView = document.getElementById('popular-view');
+            const playerView = document.getElementById('player-view');
+            const genericView = document.getElementById('generic-view');
+
+            if(homeView) hideMainView(homeView);
+            if(popularView) hideMainView(popularView);
+            hideMainView(playerView);
+            hideMainView(genericView);
+
+            if (tabName === 'home') {
+                if(homeView) showMainView(homeView, direction);
+            } else if (tabName === 'popular') {
+                if(popularView) showMainView(popularView, direction);
+                loadPopularTop100(); // Загружаем сетку 100 фильмов
+            } else {
+                showMainView(genericView, direction);
+                document.getElementById('generic-title').innerText = tabName === 'collections' ? 'Подборки' : 'Профиль';
+                document.getElementById('generic-icon').className = tabName === 'collections' ? 'fa-solid fa-layer-group text-purple-400' : 'fa-solid fa-user text-blue-400';
+            }
+        }
+
+        function showCatalogView() {
+            switchNavTab('home');
+        }
+
+        // --- ЗАГРУЗКА ДАННЫХ ИЗ API ---
+        async function loadHomeData() {
+            const slider = document.getElementById('home-popular-slider');
+            try {
+                const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.2/films/collections?type=TOP_POPULAR_ALL&page=1`, { headers: API_HEADERS });
+                if (!res.ok) throw new Error('API Error');
+                const data = await res.json();
+                
+                if (data.items && data.items.length > 0) {
+                    // Берем первые 15 для слайдера на главной
+                    slider.innerHTML = data.items.slice(0, 15).map(movie => createMovieCard(movie, true)).join('');
+                }
+            } catch (err) {
+                slider.innerHTML = `<div class="text-sm text-m3-outline py-10">Ошибка загрузки</div>`;
+            }
+        }
+
+        // Состояние пагинации каталога "Популярное"
+        let popularNextPage = 1;      // с какой страницы API начинать следующую подгрузку
+        let popularTotalPages = null; // сколько всего страниц по 20 фильмов есть в коллекции
+        let popularApiTotal = null;   // сколько всего фильмов в коллекции (из ответа API)
+        let popularLoadedCount = 0;   // сколько фильмов уже подгружено и показано (100, 200, 300...)
+        let popularLoadingMore = false;
+
+        // Запрашивает несколько страниц коллекции подряд и объединяет фильмы в один список
+        async function fetchPopularBatch(startPage, pagesCount) {
+            const promises = [];
+            for (let i = startPage; i < startPage + pagesCount; i++) {
+                promises.push(
+                    fetch(`https://kinopoiskapiunofficial.tech/api/v2.2/films/collections?type=TOP_POPULAR_ALL&page=${i}`, { headers: API_HEADERS })
+                    .then(res => res.json())
+                );
+            }
+
+            const results = await Promise.all(promises);
+            let items = [];
+
+            results.forEach(data => {
+                if (data.items) items = items.concat(data.items);
+                if (typeof data.totalPages === 'number') popularTotalPages = data.totalPages;
+                if (typeof data.total === 'number') popularApiTotal = data.total;
+            });
+
+            return items;
+        }
+
+        // Обновляет надпись "Найдено позиций" реальным числом фильмов во всей коллекции
+        function updatePopularCountLabel() {
+            const countLabel = document.getElementById('catalog-count-label');
+            if (!countLabel) return;
+            countLabel.innerHTML = `Найдено позиций: ${popularLoadedCount}`;
+        }
+
+        function removeLoadMoreButton() {
+            const wrap = document.getElementById('popular-load-more-wrap');
+            if (wrap) wrap.remove();
+        }
+
+        // Показывает кнопку "Ещё", если в коллекции остались ещё не загруженные страницы
+        function renderLoadMoreButton() {
+            removeLoadMoreButton();
+            if (popularTotalPages && popularNextPage > popularTotalPages) return;
+
+            const grid = document.getElementById('movies-grid-container');
+            const wrap = document.createElement('div');
+            wrap.id = 'popular-load-more-wrap';
+            wrap.className = 'col-span-full flex justify-center pt-2 pb-4';
+            wrap.innerHTML = `<button id="popular-load-more-btn" onclick="loadMorePopular()" class="px-6 py-3 rounded-full bg-m3-surfaceContainerHigh hover:bg-m3-primary hover:text-m3-onPrimary text-white font-semibold text-sm transition-colors duration-300 border border-m3-outlineVariant/30 flex items-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-plus"></i> Ещё
+            </button>`;
+            grid.appendChild(wrap);
+        }
+
+        async function loadPopularTop100() {
+            const grid = document.getElementById('movies-grid-container');
+
+            // Предотвращаем повторную загрузку, если уже что-то загружено
+            if(grid.children.length > 0 && !grid.innerHTML.includes('spinner')) return;
+
+            // Сбрасываем пагинацию — это первая загрузка коллекции
+            popularNextPage = 1;
+            popularTotalPages = null;
+            popularApiTotal = null;
+            popularLoadedCount = 0;
+
+            grid.innerHTML = `<div class="col-span-full text-center py-10"><i class="fa-solid fa-spinner fa-spin text-m3-primary text-2xl"></i><span class="ml-3 text-m3-outline text-sm block mt-2">Сбор ТОП-100...</span></div>`;
+
+            try {
+                // Первая порция — 5 страниц по 20 фильмов = 100 фильмов
+                const items = await fetchPopularBatch(popularNextPage, 5);
+
+                if (items.length > 0) {
+                    grid.innerHTML = items.map(movie => createMovieCard(movie, false)).join('');
+                    popularNextPage += 5;
+                    popularLoadedCount = items.length;
+                    updatePopularCountLabel();
+                    renderLoadMoreButton();
+                } else {
+                    grid.innerHTML = `<div class="col-span-full text-center py-10 text-m3-outline text-sm">Нет данных.</div>`;
+                }
+            } catch (err) {
+                grid.innerHTML = `<div class="col-span-full text-center py-10 text-m3-outline text-sm">Ошибка сети.</div>`;
+            }
+        }
+
+        // Подгружает следующую порцию фильмов (ещё до 100) по кнопке "Ещё"
+        async function loadMorePopular() {
+            if (popularLoadingMore) return;
+            if (popularTotalPages && popularNextPage > popularTotalPages) { removeLoadMoreButton(); return; }
+
+            popularLoadingMore = true;
+            const btn = document.getElementById('popular-load-more-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Загрузка...`;
+            }
+
+            try {
+                const pagesToFetch = popularTotalPages ? Math.min(5, popularTotalPages - popularNextPage + 1) : 5;
+                const items = await fetchPopularBatch(popularNextPage, pagesToFetch);
+                const grid = document.getElementById('movies-grid-container');
+
+                removeLoadMoreButton();
+
+                if (items.length > 0) {
+                    grid.insertAdjacentHTML('beforeend', items.map(movie => createMovieCard(movie, false)).join(''));
+                    popularNextPage += pagesToFetch;
+                    popularLoadedCount += items.length;
+                }
+
+                updatePopularCountLabel();
+                renderLoadMoreButton();
+            } catch (err) {
+                renderLoadMoreButton(); // возвращаем кнопку, чтобы можно было попробовать ещё раз
+            } finally {
+                popularLoadingMore = false;
+            }
+        }
+
+        // --- ИСТОРИЯ ПРОСМОТРОВ (Локальное хранилище) ---
+        function renderHistory() {
+            const slider = document.getElementById('home-history-slider');
+            const history = JSON.parse(localStorage.getItem('zibHistory') || '[]');
+
+            if (history.length === 0) {
+                slider.innerHTML = `<div class="text-sm text-m3-outline py-6 px-4 bg-m3-surfaceContainerLow rounded-2xl w-full border border-m3-outlineVariant/20 border-dashed text-center">Вы еще ничего не смотрели. История пуста.</div>`;
+            } else {
+                slider.innerHTML = history.map(movie => createMovieCard(movie, true)).join('');
+            }
+        }
+
+        function addToHistory(movieData) {
+            if (!movieData.kinopoiskId && !movieData.filmId) return;
+            
+            let history = JSON.parse(localStorage.getItem('zibHistory') || '[]');
+            const mId = movieData.kinopoiskId || movieData.filmId;
+            
+            // Удаляем старую запись, если фильм уже есть в истории (чтобы поднять его наверх)
+            history = history.filter(m => (m.kinopoiskId || m.filmId) != mId);
+            history.unshift(movieData); // Вставляем в начало
+            
+            if (history.length > 20) history.pop(); // Храним только последние 20
+            
+            localStorage.setItem('zibHistory', JSON.stringify(history));
+            renderHistory(); // Обновляем ползунок
+        }
+
+        function clearHistory() {
+            localStorage.removeItem('zibHistory');
+            renderHistory();
+        }
+
+        // --- УПРАВЛЕНИЕ СЛАЙДЕРАМИ ---
+        function scrollSlider(sliderId, direction) {
+            const slider = document.getElementById(sliderId);
+            if (slider) {
+                // Прокручиваем на 70% ширины видимой области
+                const scrollAmount = slider.clientWidth * 0.70; 
+                slider.scrollBy({ left: scrollAmount * direction, behavior: 'smooth' });
+            }
+        }
+
+        // 2. LIVE SEARCH AUTOCOMPLETE
+        function handleLiveSearch(query) {
+            query = query.trim();
+            const suggestionsBox = document.getElementById('search-suggestions');
+            const container = document.getElementById('suggestions-container');
+            const icon = document.getElementById('search-btn-icon');
+
+            if (!query) {
+                container.innerHTML = '<div class="text-xs text-m3-outline p-3 text-center">Начните вводить название...</div>';
+                return;
+            }
+
+            // Show loading spinner
+            icon.className = 'fa-solid fa-spinner fa-spin';
+            
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(async () => {
+                try {
+                    // Check if query is just numbers (direct ID)
+                    if (/^\d+$/.test(query)) {
+                        container.innerHTML = `
+                            <button onclick="openMoviePlayer('${query}')" class="w-full text-left p-3 hover:bg-m3-surfaceContainerHighest transition-colors flex items-center gap-3 rounded-xl animate-fade-in-down">
+                                <div class="w-10 h-10 rounded bg-m3-primaryContainer text-m3-onPrimaryContainer flex items-center justify-center shrink-0"><i class="fa-solid fa-hashtag"></i></div>
+                                <div>
+                                    <div class="text-sm font-bold text-white">Открыть по ID: ${query}</div>
+                                    <div class="text-[10px] text-m3-outline">Прямой переход</div>
+                                </div>
+                            </button>
+                        `;
+                        return;
+                    }
+
+                    // Text query search
+                    const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword?keyword=${encodeURIComponent(query)}&page=1`, { headers: API_HEADERS });
+                    if (!res.ok) throw new Error('Search failed');
+                    const data = await res.json();
+
+                    if (data.films && data.films.length > 0) {
+                        // Take top 5 results
+                        const topResults = data.films.slice(0, 5);
+                        container.innerHTML = topResults.map((film, index) => {
+                            const name = film.nameRu || film.nameEn || 'Неизвестно';
+                            const year = film.year || '';
+                            const rating = film.rating ? `<span class="text-amber-400 font-bold px-1 rounded bg-amber-400/10">★ ${film.rating}</span>` : '';
+                            
+                            return `
+                                <button onclick="openMoviePlayer('${film.filmId}')" class="w-full text-left p-2 hover:bg-m3-surfaceContainerHighest transition-colors flex items-center gap-3 rounded-xl animate-fade-in-down" style="animation-delay: ${index * 50}ms">
+                                    <img src="${film.posterUrlPreview || film.posterUrl}" class="w-10 h-14 object-cover rounded bg-m3-surfaceLowest" referrerpolicy="no-referrer" onerror="this.src='${fallbackPoster}'">
+                                    <div class="flex-grow min-w-0">
+                                        <div class="text-xs sm:text-sm font-bold text-white truncate">${name}</div>
+                                        <div class="text-[10px] text-m3-outline flex items-center gap-2 mt-0.5">
+                                            <span>${year}</span> ${rating}
+                                        </div>
+                                    </div>
+                                </button>
+                            `;
+                        }).join('');
+                    } else {
+                        container.innerHTML = '<div class="text-xs text-m3-outline p-3 text-center">Ничего не найдено</div>';
+                    }
+                } catch (err) {
+                    console.error('Search API error:', err);
+                    container.innerHTML = '<div class="text-xs text-red-400 p-3 text-center">Ошибка сети.</div>';
+                } finally {
+                    icon.className = 'fa-solid fa-arrow-right';
+                }
+            }, 500); // 500ms debounce
+        }
+
+        function executeDirectSearch() {
+            const input = document.getElementById('search-input').value.trim();
+            if (input) {
+                // If it's an ID, open directly
+                if (/^\d+$/.test(input)) {
+                    openMoviePlayer(input);
+                } else {
+                    // Force the dropdown to show top result and simulate click on it (for simplicity, we just trigger live search)
+                    handleLiveSearch(input);
+                    document.getElementById('search-suggestions').classList.remove('hidden');
+                }
+            }
+        }
+
+        // 3. FULL MOVIE DETAILS & PLAYER LOGIC
+        async function openMoviePlayer(kpId) {
+            // Очищаем поиск
+            document.getElementById('search-suggestions').classList.add('hidden');
+            document.getElementById('search-input').value = '';
+
+            // Переключаем интерфейс
+            const homeView = document.getElementById('home-view');
+            const popularView = document.getElementById('popular-view');
+            const genericView = document.getElementById('generic-view');
+            const playerView = document.getElementById('player-view');
+
+            if(homeView) hideMainView(homeView);
+            if(popularView) hideMainView(popularView);
+            if(genericView) hideMainView(genericView);
+            showMainView(playerView, 'right');
+            
+            // Ставим загрузочные данные
+            document.getElementById('current-player-kp-id').innerText = kpId;
+            document.getElementById('player-movie-title').innerText = 'Загрузка информации...';
+            document.getElementById('player-movie-description').innerText = '';
+            document.getElementById('player-movie-meta').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-m3-primary"></i>';
+            document.getElementById('meta-bg-blur').style.backgroundImage = 'none';
+
+            activeMovieId = kpId;
+            activeMovieType = 'FILM'; // Значение по умолчанию, пока API не ответит
+            
+            // Ставим заглушку загрузки плеера, пока ждём данные API
+            const wrapper = document.getElementById('player-wrapper');
+            if (wrapper) {
+                wrapper.innerHTML = `
+                    <div class="absolute inset-0 flex flex-col items-center justify-center text-m3-outline gap-3 bg-black">
+                        <i class="fa-solid fa-circle-notch fa-spin text-3xl"></i>
+                        <span class="text-xs">Подключение медиа...</span>
+                    </div>
+                `;
+            }
+
+            try {
+                // Загружаем полные данные из API для плеера
+                const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.2/films/${kpId}`, { headers: API_HEADERS });
+                if (res.ok) {
+                    const film = await res.json();
+                    
+                    activeMovieType = film.type || 'FILM'; // Сохраняем тип (FILM, TV_SERIES и т.д.)
+                    setPlayerMode(currentMode); // Теперь инжектим iframe, зная тип!
+                    
+                    const name = film.nameRu || film.nameOriginal || `Фильм #${kpId}`;
+                    const year = film.year || 'Н/Д';
+                    const rating = film.ratingKinopoisk || film.ratingImdb || '—';
+                    const length = film.filmLength ? `${film.filmLength} мин.` : '';
+                    const genres = film.genres ? film.genres.map(g => g.genre).slice(0, 3).join(', ') : '';
+                    
+                    document.getElementById('player-movie-title').innerText = name;
+                    document.getElementById('player-movie-description').innerText = film.description || film.shortDescription || 'Описание отсутствует.';
+                    
+                    document.getElementById('player-movie-meta').innerHTML = `
+                        <span class="px-2 py-1 rounded bg-m3-surfaceContainerLow border border-m3-outlineVariant/30">${year}</span>
+                        ${genres ? `<span class="px-2 py-1 rounded bg-m3-surfaceContainerLow border border-m3-outlineVariant/30">${genres}</span>` : ''}
+                        ${length ? `<span class="px-2 py-1 rounded bg-m3-surfaceContainerLow border border-m3-outlineVariant/30"><i class="fa-regular fa-clock"></i> ${length}</span>` : ''}
+                        <span class="px-2 py-1 rounded bg-amber-500/10 text-amber-400 font-bold border border-amber-500/20">★ ${rating}</span>
+                    `;
+
+                    document.getElementById('meta-bg-blur').style.backgroundImage = `url('https://st.kp.yandex.net/images/film_big/${kpId}.jpg')`;
+
+                    // Сохраняем в историю просмотров
+                    addToHistory(film);
+                }
+            } catch (err) {
+                console.error("Failed to load details:", err);
+                document.getElementById('player-movie-title').innerText = `Просмотр (ID: ${kpId})`;
+                document.getElementById('player-movie-meta').innerHTML = '<span class="text-red-400 text-xs">Данные не загружены</span>';
+                
+                // В случае ошибки пытаемся запустить плеер как фильм по умолчанию
+                setPlayerMode(currentMode);
+                
+                // Сохраняем хотя бы ID в историю, если данные недоступны
+                addToHistory({ kinopoiskId: kpId, nameRu: `Фильм #${kpId}` });
+            }
+        }
+
+        // Dropdown toggle logic
+        function togglePlayerSelectMenu() {
+            const dropdown = document.getElementById('player-selector-dropdown');
+            const arrow = document.getElementById('player-selector-arrow');
+            
+            if (dropdown.classList.contains('hidden')) {
+                dropdown.classList.remove('hidden');
+                dropdown.classList.add('flex');
+                if (arrow) arrow.style.transform = 'rotate(180deg)';
+            } else {
+                dropdown.classList.add('hidden');
+                dropdown.classList.remove('flex');
+                if (arrow) arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // Apply Player iframe injection
+        function setPlayerMode(mode) {
+            currentMode = mode;
+            if (!activeMovieId) return;
+
+            // Close dropdown
+            const dropdown = document.getElementById('player-selector-dropdown');
+            const arrow = document.getElementById('player-selector-arrow');
+            if (dropdown) { dropdown.classList.add('hidden'); dropdown.classList.remove('flex'); }
+            if (arrow) arrow.style.transform = 'rotate(0deg)';
+
+            // Update UI Badges
+            const namesMap = {
+                'external_villybizy': 'Villybizy',
+                'external_collaps': 'Collaps CDN',
+                'external_videocdn': 'VideoCDN',
+                'external_kinobox': 'Kinobox'
+            };
+            document.getElementById('active-player-name-badge').innerText = namesMap[mode] || 'Плеер';
+
+            // Reset buttons styling
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-m3-primaryContainer', 'text-m3-onPrimaryContainer');
+                const check = btn.querySelector('.check-icon');
+                if (check) check.classList.add('hidden');
+            });
+            const activeBtn = document.getElementById('btn-mode-' + mode);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-m3-primaryContainer', 'text-m3-onPrimaryContainer');
+                const check = activeBtn.querySelector('.check-icon');
+                if (check) check.classList.remove('hidden');
+            }
+
+            // Inject Iframe
+            const wrapper = document.getElementById('player-wrapper');
+            let iframeSrc = '';
+
+            if (mode === 'external_kinobox') {
+                iframeSrc = `https://kinobox.tv/kinopoisk/${activeMovieId}`; 
+            } else if (mode === 'external_villybizy') {
+                // Логика Villybizy: проверяем сериал ли это
+                const isSeries = ['TV_SERIES', 'MINI_SERIES', 'TV_SHOW'].includes(activeMovieType);
+                const route = isSeries ? 'series' : 'film';
+                iframeSrc = `https://villybizy.skin/${route}/${activeMovieId}/`; 
+            } else if (mode === 'external_collaps') {
+                iframeSrc = `https://api.collaps.org/embed/movie/${activeMovieId}`;
+            } else if (mode === 'external_videocdn') {
+                iframeSrc = `https://vids.suralis.stream/v2/embed/kp/${activeMovieId}`;
+            }
+
+            if (wrapper) {
+                wrapper.innerHTML = `
+                    <iframe src="${iframeSrc}" 
+                            allowfullscreen 
+                            allow="autoplay; encrypted-media; picture-in-picture"
+                            class="w-full h-full border-0 absolute inset-0 z-10 bg-black">
+                    </iframe>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
