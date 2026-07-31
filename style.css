@@ -1,0 +1,29 @@
+/* STREAMING_CHUNK:Defining CSS Material Design variables... */ :root { --m3-surface: 20 18 24; --m3-surface-dim: 20 18 24; --m3-surface-bright: 59 56 62; --m3-surface-container-lowest: 15 13 19; --m3-surface-container-low: 29 27 32; --m3-surface-container: 33 31 38; --m3-surface-container-high: 43 41 48; --m3-surface-container-highest: 54 52 59; --m3-on-surface: 255 255 255; --m3-secondary: 204 194 220; --m3-on-secondary: 51 45 65; --m3-outline: 147 143 153; --m3-outline-variant: 73 69 79; --m3-primary: 208 188 255; --m3-on-primary: 56 30 114; --m3-primary-container: 79 55 139; --m3-on-primary-container: 234 221 255; }
+
+/* STREAMING_CHUNK:Configuring custom scrollbars and slider styling... */ html { scrollbar-width: thin; scrollbar-color: rgb(var(--m3-outline-variant)) rgb(var(--m3-surface-container-low)); }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+
+::-webkit-scrollbar-track { background: rgb(var(--m3-surface-container-low)); }
+
+::-webkit-scrollbar-thumb { background: rgb(var(--m3-outline-variant)); border-radius: 4px; }
+
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--m3-outline)); }
+
+.m3-slider { -webkit-appearance: none; appearance: none; height: 6px; background: rgb(var(--m3-outline-variant)); border-radius: 9999px; outline: none; cursor: pointer; }
+
+.m3-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: rgb(var(--m3-primary)); cursor: pointer; transition: transform 0.15s ease; }
+
+.m3-slider::-webkit-slider-thumb:hover { transform: scale(1.25); }
+
+/* STREAMING_CHUNK:Adding keyframes and smooth transitions... */ @keyframes fadeInDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+.animate-fade-in-down { animation: fadeInDown 0.2s ease-out forwards; }
+
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.view-anim.view-enter-right { opacity: 0; transform: translateX(28px); }
+
+.view-anim.view-enter-left { opacity: 0; transform: translateX(-28px); }
