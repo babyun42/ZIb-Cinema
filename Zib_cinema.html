@@ -8,40 +8,29 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Позволяет использовать CSS-переменные как цвета Tailwind, сохраняя поддержку
-        // модификаторов прозрачности вида bg-m3-primary/50
-        function withOpacity(cssVar) {
-            return ({ opacityValue }) => {
-                if (opacityValue !== undefined) {
-                    return `rgb(var(${cssVar}) / ${opacityValue})`;
-                }
-                return `rgb(var(${cssVar}))`;
-            };
-        }
-
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
                         m3: {
-                            surface: withOpacity('--m3-surface'),
-                            surfaceDim: withOpacity('--m3-surface-dim'),
-                            surfaceBright: withOpacity('--m3-surface-bright'),
-                            surfaceContainerLowest: withOpacity('--m3-surface-container-lowest'),
-                            surfaceContainerLow: withOpacity('--m3-surface-container-low'),
-                            surfaceContainer: withOpacity('--m3-surface-container'),
-                            surfaceContainerHigh: withOpacity('--m3-surface-container-high'),
-                            surfaceContainerHighest: withOpacity('--m3-surface-container-highest'),
-                            primary: withOpacity('--m3-primary'),
-                            onPrimary: withOpacity('--m3-on-primary'),
-                            primaryContainer: withOpacity('--m3-primary-container'),
-                            onPrimaryContainer: withOpacity('--m3-on-primary-container'),
-                            secondary: withOpacity('--m3-secondary'),
-                            onSecondary: withOpacity('--m3-on-secondary'),
-                            outline: withOpacity('--m3-outline'),
-                            outlineVariant: withOpacity('--m3-outline-variant'),
-                            onSurface: withOpacity('--m3-on-surface')
+                            surface: '#141218',
+                            surfaceDim: '#141218',
+                            surfaceBright: '#3b383e',
+                            surfaceContainerLowest: '#0f0d13',
+                            surfaceContainerLow: '#1d1b20',
+                            surfaceContainer: '#211f26',
+                            surfaceContainerHigh: '#2b2930',
+                            surfaceContainerHighest: '#36343b',
+                            primary: '#d0bcff',
+                            onPrimary: '#381e72',
+                            primaryContainer: '#4f378b',
+                            onPrimaryContainer: '#eaddff',
+                            secondary: '#ccc2dc',
+                            onSecondary: '#332d41',
+                            outline: '#938f99',
+                            outlineVariant: '#49454f',
+                            onSurface: '#ffffff'
                         }
                     },
                     fontFamily: {
@@ -112,11 +101,61 @@
         
         /* Скрытие скроллбара для горизонтальных списков (слайдеров) */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            overscroll-behavior-x: contain; /* Не даёт свайпу "провалиться" за пределы ленты на телефоне */
+            -webkit-overflow-scrolling: touch;
+        }
 
         /* Плавное появление секций-страниц при переключении вкладок */
         .view-anim.view-enter-right { opacity: 0; transform: translateX(28px); }
         .view-anim.view-enter-left { opacity: 0; transform: translateX(-28px); }
+
+        /* ===== ЖИВАЯ ТЕМА =====
+           Tailwind генерирует классы bg-m3-*/text-m3-*/border-m3-* один раз при первом
+           появлении элемента и не умеет сам следить за CSS-переменными внутри функций цвета.
+           Поэтому здесь эти же классы переопределяются напрямую через var(--m3-*) с !important —
+           так смена переменных в applyTheme() гарантированно красит весь сайт, а не только то,
+           что генерируется заново. */
+        .bg-m3-primary { background-color: rgb(var(--m3-primary)) !important; }
+        .bg-m3-primary\/50 { background-color: rgb(var(--m3-primary) / 0.5) !important; }
+        .bg-m3-primaryContainer { background-color: rgb(var(--m3-primary-container)) !important; }
+        .bg-m3-surface { background-color: rgb(var(--m3-surface)) !important; }
+        .bg-m3-surfaceContainer { background-color: rgb(var(--m3-surface-container)) !important; }
+        .bg-m3-surfaceContainer\/90 { background-color: rgb(var(--m3-surface-container) / 0.9) !important; }
+        .bg-m3-surfaceContainerHigh { background-color: rgb(var(--m3-surface-container-high)) !important; }
+        .bg-m3-surfaceContainerHigh\/95 { background-color: rgb(var(--m3-surface-container-high) / 0.95) !important; }
+        .bg-m3-surfaceContainerHighest\/95 { background-color: rgb(var(--m3-surface-container-highest) / 0.95) !important; }
+        .bg-m3-surfaceContainerLow { background-color: rgb(var(--m3-surface-container-low)) !important; }
+        .bg-m3-surfaceContainerLowest { background-color: rgb(var(--m3-surface-container-lowest)) !important; }
+        .border-m3-onSurface { border-color: rgb(var(--m3-on-surface)) !important; }
+        .border-m3-outlineVariant\/20 { border-color: rgb(var(--m3-outline-variant) / 0.2) !important; }
+        .border-m3-outlineVariant\/30 { border-color: rgb(var(--m3-outline-variant) / 0.3) !important; }
+        .border-m3-outlineVariant\/40 { border-color: rgb(var(--m3-outline-variant) / 0.4) !important; }
+        .border-m3-primary { border-color: rgb(var(--m3-primary)) !important; }
+        .text-m3-onPrimary { color: rgb(var(--m3-on-primary)) !important; }
+        .text-m3-onPrimaryContainer { color: rgb(var(--m3-on-primary-container)) !important; }
+        .text-m3-onSurface { color: rgb(var(--m3-on-surface)) !important; }
+        .text-m3-outline { color: rgb(var(--m3-outline)) !important; }
+        .text-m3-primary { color: rgb(var(--m3-primary)) !important; }
+        .text-m3-secondary { color: rgb(var(--m3-secondary)) !important; }
+
+        .focus\:bg-m3-surfaceContainerHigh:focus { background-color: rgb(var(--m3-surface-container-high)) !important; }
+        .focus\:border-m3-primary:focus { border-color: rgb(var(--m3-primary)) !important; }
+        .hover\:bg-m3-primary:hover { background-color: rgb(var(--m3-primary)) !important; }
+        .hover\:bg-m3-primaryContainer:hover { background-color: rgb(var(--m3-primary-container)) !important; }
+        .hover\:bg-m3-surfaceContainerHighest:hover { background-color: rgb(var(--m3-surface-container-highest)) !important; }
+        .hover\:border-m3-outlineVariant\/50:hover { border-color: rgb(var(--m3-outline-variant) / 0.5) !important; }
+        .hover\:text-m3-onPrimary:hover { color: rgb(var(--m3-on-primary)) !important; }
+        .hover\:text-m3-onPrimaryContainer:hover { color: rgb(var(--m3-on-primary-container)) !important; }
+        .hover\:text-m3-onSurface:hover { color: rgb(var(--m3-on-surface)) !important; }
+        .group:hover .group-hover\:text-m3-primary { color: rgb(var(--m3-primary)) !important; }
+        .placeholder\:text-m3-outline::placeholder { color: rgb(var(--m3-outline)) !important; }
+        body::selection, body *::selection {
+            background-color: rgb(var(--m3-primary-container)) !important;
+            color: rgb(var(--m3-on-primary-container)) !important;
+        }
     </style>
 
     <script>
@@ -229,23 +268,23 @@
             </div>
 
             <!-- Material 3 Navigation Tabs (Removed Catalog and Search) -->
-            <nav class="relative flex items-center justify-center gap-1 sm:gap-2 bg-transparent p-1.5 rounded-full text-xs sm:text-sm font-medium z-0">
+            <nav class="relative flex items-center justify-center gap-1 sm:gap-2 bg-transparent p-1.5 rounded-full text-xs sm:text-sm font-medium z-0 w-full md:w-auto overflow-x-auto hide-scrollbar flex-nowrap">
                 <div id="nav-indicator" class="absolute top-1.5 bottom-1.5 bg-m3-primaryContainer rounded-full transition-all duration-300 ease-in-out -z-10 shadow-sm" style="width: 0px; left: 0px;"></div>
 
-                <button onclick="switchNavTab('home')" id="nav-btn-home" class="nav-tab-btn active px-4 py-2 rounded-full transition-colors duration-300 flex items-center gap-2 text-m3-onPrimaryContainer font-bold">
-                    <i class="fa-solid fa-house"></i> <span>Главная</span>
+                <button onclick="switchNavTab('home')" id="nav-btn-home" class="nav-tab-btn active shrink-0 px-3 sm:px-4 py-2 rounded-full transition-colors duration-300 flex items-center gap-2 text-m3-onPrimaryContainer font-bold">
+                    <i class="fa-solid fa-house"></i> <span class="hidden sm:inline">Главная</span>
                 </button>
-                <button onclick="switchNavTab('popular')" id="nav-btn-popular" class="nav-tab-btn px-4 py-2 rounded-full transition-colors duration-300 flex items-center gap-2 text-m3-secondary hover:text-m3-onSurface">
-                    <i class="fa-solid fa-fire text-amber-400"></i> <span>Популярное</span>
+                <button onclick="switchNavTab('popular')" id="nav-btn-popular" class="nav-tab-btn shrink-0 px-3 sm:px-4 py-2 rounded-full transition-colors duration-300 flex items-center gap-2 text-m3-secondary hover:text-m3-onSurface">
+                    <i class="fa-solid fa-fire text-amber-400"></i> <span class="hidden sm:inline">Популярное</span>
                 </button>
-                <button onclick="switchNavTab('collections')" id="nav-btn-collections" class="nav-tab-btn px-4 py-2 rounded-full transition-colors duration-300 flex items-center gap-2 text-m3-secondary hover:text-m3-onSurface">
-                    <i class="fa-solid fa-layer-group text-purple-400"></i> <span>Подборки</span>
+                <button onclick="switchNavTab('collections')" id="nav-btn-collections" class="nav-tab-btn shrink-0 px-3 sm:px-4 py-2 rounded-full transition-colors duration-300 flex items-center gap-2 text-m3-secondary hover:text-m3-onSurface">
+                    <i class="fa-solid fa-layer-group text-purple-400"></i> <span class="hidden sm:inline">Подборки</span>
                 </button>
-                <button onclick="switchNavTab('profile')" id="nav-btn-profile" class="nav-tab-btn px-4 py-2 rounded-full transition-colors duration-300 flex items-center gap-2 text-m3-secondary hover:text-m3-onSurface">
-                    <i class="fa-solid fa-user"></i> <span>Профиль</span>
+                <button onclick="switchNavTab('profile')" id="nav-btn-profile" class="nav-tab-btn shrink-0 px-3 sm:px-4 py-2 rounded-full transition-colors duration-300 flex items-center gap-2 text-m3-secondary hover:text-m3-onSurface">
+                    <i class="fa-solid fa-user"></i> <span class="hidden sm:inline">Профиль</span>
                 </button>
-                <button onclick="switchNavTab('settings')" id="nav-btn-settings" class="nav-tab-btn px-4 py-2 rounded-full transition-colors duration-300 flex items-center gap-2 text-m3-secondary hover:text-m3-onSurface">
-                    <i class="fa-solid fa-gear"></i> <span>Настройки</span>
+                <button onclick="switchNavTab('settings')" id="nav-btn-settings" class="nav-tab-btn shrink-0 px-3 sm:px-4 py-2 rounded-full transition-colors duration-300 flex items-center gap-2 text-m3-secondary hover:text-m3-onSurface">
+                    <i class="fa-solid fa-gear"></i> <span class="hidden sm:inline">Настройки</span>
                 </button>
             </nav>
 
@@ -389,6 +428,19 @@
                         <i class="fa-solid fa-circle-notch fa-spin text-3xl"></i>
                         <span class="text-xs">Загрузка медиапотока...</span>
                     </div>
+                </div>
+            </div>
+
+            <!-- Подсказка, если источник долго не отвечает (частая ситуация в мобильных сетях) -->
+            <div id="player-stall-hint" class="hidden bg-m3-surfaceContainerHigh border border-m3-outlineVariant/30 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+                <p class="text-xs sm:text-sm text-m3-secondary flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+                    Источник долго не отвечает. Попробуйте другой:
+                </p>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="setPlayerMode('external_kinobox')" class="px-3 py-1.5 rounded-full bg-m3-primaryContainer text-m3-onPrimaryContainer text-xs font-medium hover:bg-m3-primary hover:text-m3-onPrimary transition-colors">Kinobox</button>
+                    <button onclick="setPlayerMode('external_collaps')" class="px-3 py-1.5 rounded-full bg-m3-primaryContainer text-m3-onPrimaryContainer text-xs font-medium hover:bg-m3-primary hover:text-m3-onPrimary transition-colors">Collaps CDN</button>
+                    <button onclick="setPlayerMode('external_videocdn')" class="px-3 py-1.5 rounded-full bg-m3-primaryContainer text-m3-onPrimaryContainer text-xs font-medium hover:bg-m3-primary hover:text-m3-onPrimary transition-colors">VideoCDN</button>
                 </div>
             </div>
 
@@ -1071,14 +1123,32 @@
                 iframeSrc = `https://vids.suralis.stream/v2/embed/kp/${activeMovieId}`;
             }
 
+            // Сбрасываем предыдущий таймер и прячем подсказку про долгую загрузку
+            if (window.playerStallTimer) clearTimeout(window.playerStallTimer);
+            const stallHint = document.getElementById('player-stall-hint');
+            if (stallHint) stallHint.classList.add('hidden');
+
             if (wrapper) {
                 wrapper.innerHTML = `
                     <iframe src="${iframeSrc}" 
+                            id="active-player-iframe"
                             allowfullscreen 
-                            allow="autoplay; encrypted-media; picture-in-picture"
+                            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                            referrerpolicy="origin"
                             class="w-full h-full border-0 absolute inset-0 z-10 bg-black">
                     </iframe>
                 `;
+
+                // Если за 8 секунд iframe даже не начал грузиться (частая история для
+                // проблемных источников на мобильных сетях) — предлагаем переключиться
+                let iframeLoaded = false;
+                const iframeEl = document.getElementById('active-player-iframe');
+                if (iframeEl) {
+                    iframeEl.onload = () => { iframeLoaded = true; };
+                }
+                window.playerStallTimer = setTimeout(() => {
+                    if (!iframeLoaded && stallHint) stallHint.classList.remove('hidden');
+                }, 8000);
             }
         }
     </script>
