@@ -67,8 +67,10 @@
             scrollbar-width: none;
             overscroll-behavior-x: contain; /* Не даёт свайпу "провалиться" за пределы ленты на телефоне */
             -webkit-overflow-scrolling: touch;
-            touch-action: pan-x; /* Явно отдаём одиночный палец под горизонтальный свайп этой ленты */
+            touch-action: none; /* Скроллом теперь управляет JS (drag-scroll) — нативную обработку браузера убираем полностью */
+            cursor: grab;
         }
+        .hide-scrollbar.is-dragging { cursor: grabbing; scroll-snap-type: none !important; }
 
         /* Плавное появление секций-страниц при переключении вкладок */
         .view-anim.view-enter-right { opacity: 0; transform: translateX(28px); }
