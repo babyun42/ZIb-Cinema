@@ -67,6 +67,7 @@
             scrollbar-width: none;
             overscroll-behavior-x: contain; /* Не даёт свайпу "провалиться" за пределы ленты на телефоне */
             -webkit-overflow-scrolling: touch;
+            touch-action: pan-x; /* Явно отдаём одиночный палец под горизонтальный свайп этой ленты */
         }
 
         /* Плавное появление секций-страниц при переключении вкладок */

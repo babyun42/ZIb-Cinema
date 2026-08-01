@@ -116,6 +116,7 @@
             scrollbar-width: none;
             overscroll-behavior-x: contain; /* Не даёт свайпу "провалиться" за пределы ленты на телефоне */
             -webkit-overflow-scrolling: touch;
+            touch-action: pan-x; /* Явно отдаём одиночный палец под горизонтальный свайп этой ленты */
         }
 
         /* Плавное появление секций-страниц при переключении вкладок */
@@ -338,7 +339,7 @@
                 <div class="relative group/slider">
                     <button onclick="scrollSlider('home-popular-slider', -1)" class="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 sm:w-10 sm:h-10 bg-black/80 hover:bg-m3-primary hover:text-m3-onPrimary rounded-full text-white hidden md:flex items-center justify-center opacity-0 group-hover/slider:opacity-100 transition-all duration-300 backdrop-blur-md border border-white/10 shadow-lg cursor-pointer"><i class="fa-solid fa-chevron-left text-sm sm:text-base"></i></button>
                     
-                    <div class="flex overflow-x-auto gap-4 pt-1 pb-4 hide-scrollbar snap-x snap-proximity scroll-smooth" id="home-popular-slider">
+                    <div class="flex overflow-x-auto gap-4 pt-1 pb-4 hide-scrollbar md:snap-x md:snap-proximity scroll-smooth" id="home-popular-slider">
                         <!-- Заполняется через JS -->
                         <div class="text-sm text-m3-outline"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Загрузка новинок...</div>
                     </div>
@@ -359,7 +360,7 @@
                 <div class="relative group/slider">
                     <button onclick="scrollSlider('home-history-slider', -1)" class="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 sm:w-10 sm:h-10 bg-black/80 hover:bg-m3-primary hover:text-m3-onPrimary rounded-full text-white hidden md:flex items-center justify-center opacity-0 group-hover/slider:opacity-100 transition-all duration-300 backdrop-blur-md border border-white/10 shadow-lg cursor-pointer"><i class="fa-solid fa-chevron-left text-sm sm:text-base"></i></button>
                     
-                    <div class="flex overflow-x-auto gap-4 pt-1 pb-4 hide-scrollbar snap-x snap-proximity scroll-smooth" id="home-history-slider">
+                    <div class="flex overflow-x-auto gap-4 pt-1 pb-4 hide-scrollbar md:snap-x md:snap-proximity scroll-smooth" id="home-history-slider">
                         <!-- Заполняется через JS из localStorage -->
                     </div>
 
