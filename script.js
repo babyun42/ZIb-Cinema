@@ -302,12 +302,12 @@
             } else {
                 showMainView(genericView, direction);
                 document.getElementById('generic-title').innerText = tabName === 'collections' ? 'Подборки' : 'Профиль';
-                document.getElementById('generic-icon').className = tabName === 'collections' ? 'fa-solid fa-layer-group text-purple-400' : 'fa-solid fa-user text-blue-400';
+                document.getElementById('generic-icon').className = tabName === 'collections' ? 'fa-solid fa-layer-group' : 'fa-solid fa-user';
             }
         }
 
         function showCatalogView() {
-            switchNavTab('home');
+            switchNavTab(currentActiveTab);
         }
 
         // --- ЗАГРУЗКА ДАННЫХ ИЗ API ---
