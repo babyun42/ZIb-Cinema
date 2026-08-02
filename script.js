@@ -184,89 +184,12 @@
             });
         }
 
-        // Ручной drag-scroll для горизонтальных лент (карусель "Популярное сейчас" / "Вы смотрели").
-        // На части мобильных браузеров нативный overflow-x-scroll ведёт себя нестабильно с одним
-        // пальцем (нужно 2 пальца) — здесь скролл полностью считается вручную по pointer-событиям,
-        // что работает одинаково надёжно и с мышью, и с одним пальцем на телефоне.
-        function enableDragScroll(el) {
-            if (!el) return;
-            let isDown = false;
-            let moved = false;
-            let startX = 0;
-            let startScrollLeft = 0;
-            let lastX = 0;
-            let lastT = 0;
-            let velocity = 0;
-            let momentumId = null;
-
-            function stopMomentum() {
-                if (momentumId) { cancelAnimationFrame(momentumId); momentumId = null; }
-            }
-
-            function onDown(e) {
-                stopMomentum();
-                isDown = true;
-                moved = false;
-                startX = e.clientX;
-                startScrollLeft = el.scrollLeft;
-                lastX = e.clientX;
-                lastT = Date.now();
-                velocity = 0;
-                el.classList.add('is-dragging');
-                try { el.setPointerCapture(e.pointerId); } catch (err) {}
-            }
-
-            function onMove(e) {
-                if (!isDown) return;
-                const dx = e.clientX - startX;
-                if (Math.abs(dx) > 4) moved = true;
-                el.scrollLeft = startScrollLeft - dx;
-
-                const now = Date.now();
-                const dt = now - lastT;
-                if (dt > 0) {
-                    velocity = (e.clientX - lastX) / dt; // px за мс
-                    lastX = e.clientX;
-                    lastT = now;
-                }
-            }
-
-            function onUp() {
-                if (!isDown) return;
-                isDown = false;
-                el.classList.remove('is-dragging');
-
-                // Небольшая инерция после отпускания — привычное ощущение нативного скролла
-                let v = velocity * 16;
-                function step() {
-                    if (Math.abs(v) < 0.5) { momentumId = null; return; }
-                    el.scrollLeft -= v;
-                    v *= 0.94;
-                    momentumId = requestAnimationFrame(step);
-                }
-                if (Math.abs(v) > 0.5) momentumId = requestAnimationFrame(step);
-            }
-
-            el.addEventListener('pointerdown', onDown);
-            el.addEventListener('pointermove', onMove);
-            el.addEventListener('pointerup', onUp);
-            el.addEventListener('pointercancel', onUp);
-            el.addEventListener('pointerleave', onUp);
-
-            // Если это был драг, а не тап — гасим клик по карточке, чтобы не открывался плеер случайно
-            el.addEventListener('click', function (e) {
-                if (moved) { e.preventDefault(); e.stopPropagation(); }
-            }, true);
-        }
-
         // On Load initialization
         window.onload = function() {
             switchNavTab('home');
             loadHomeData(); 
             renderHistory(); 
             updateSettingsUIActiveStates(); // Отражаем сохранённую тему в разделе "Настройки"
-            enableDragScroll(document.getElementById('home-popular-slider'));
-            enableDragScroll(document.getElementById('home-history-slider'));
             
             // Close suggestions when clicking outside
             document.addEventListener('click', function(e) {

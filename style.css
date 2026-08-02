@@ -26,16 +26,11 @@
         html {
             scrollbar-width: thin;
             scrollbar-color: rgb(var(--m3-outline-variant)) rgb(var(--m3-surface-container-low));
-            overflow-x: hidden;
-            max-width: 100%;
         }
 
         body {
-            overflow-x: hidden;
-            max-width: 100%;
             min-height: 100vh;
             min-height: 100dvh; /* Учитывает реальную высоту экрана на телефоне (с учётом адресной строки) */
-            overscroll-behavior-y: contain; /* Не даёт "провалиться" в пустоту при свайпе вниз в самом низу страницы */
         }
 
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -62,15 +57,7 @@
         
         /* Скрытие скроллбара для горизонтальных списков (слайдеров) */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-            overscroll-behavior-x: contain; /* Не даёт свайпу "провалиться" за пределы ленты на телефоне */
-            -webkit-overflow-scrolling: touch;
-            touch-action: none; /* Скроллом теперь управляет JS (drag-scroll) — нативную обработку браузера убираем полностью */
-            cursor: grab;
-        }
-        .hide-scrollbar.is-dragging { cursor: grabbing; scroll-snap-type: none !important; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
         /* Плавное появление секций-страниц при переключении вкладок */
         .view-anim.view-enter-right { opacity: 0; transform: translateX(28px); }

@@ -2,7 +2,7 @@
 <html lang="ru" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <title>Zib Cinema - Умный поиск и просмотр</title>
     
     <!-- Tailwind CSS CDN -->
@@ -75,16 +75,11 @@
         html {
             scrollbar-width: thin;
             scrollbar-color: rgb(var(--m3-outline-variant)) rgb(var(--m3-surface-container-low));
-            overflow-x: hidden;
-            max-width: 100%;
         }
 
         body {
-            overflow-x: hidden;
-            max-width: 100%;
             min-height: 100vh;
             min-height: 100dvh; /* Учитывает реальную высоту экрана на телефоне (с учётом адресной строки) */
-            overscroll-behavior-y: contain; /* Не даёт "провалиться" в пустоту при свайпе вниз в самом низу страницы */
         }
 
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -111,15 +106,7 @@
         
         /* Скрытие скроллбара для горизонтальных списков (слайдеров) */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-            overscroll-behavior-x: contain; /* Не даёт свайпу "провалиться" за пределы ленты на телефоне */
-            -webkit-overflow-scrolling: touch;
-            touch-action: none; /* Скроллом теперь управляет JS (drag-scroll) — нативную обработку браузера убираем полностью */
-            cursor: grab;
-        }
-        .hide-scrollbar.is-dragging { cursor: grabbing; scroll-snap-type: none !important; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
         /* Плавное появление секций-страниц при переключении вкладок */
         .view-anim.view-enter-right { opacity: 0; transform: translateX(28px); }
@@ -341,7 +328,7 @@
                 <div class="relative group/slider">
                     <button onclick="scrollSlider('home-popular-slider', -1)" class="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 sm:w-10 sm:h-10 bg-black/80 hover:bg-m3-primary hover:text-m3-onPrimary rounded-full text-white hidden md:flex items-center justify-center opacity-0 group-hover/slider:opacity-100 transition-all duration-300 backdrop-blur-md border border-white/10 shadow-lg cursor-pointer"><i class="fa-solid fa-chevron-left text-sm sm:text-base"></i></button>
                     
-                    <div class="flex overflow-x-auto gap-4 pt-1 pb-4 hide-scrollbar md:snap-x md:snap-proximity scroll-smooth" id="home-popular-slider">
+                    <div class="flex overflow-x-auto gap-4 pt-1 pb-4 hide-scrollbar snap-x snap-mandatory scroll-smooth" id="home-popular-slider">
                         <!-- Заполняется через JS -->
                         <div class="text-sm text-m3-outline"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Загрузка новинок...</div>
                     </div>
@@ -362,7 +349,7 @@
                 <div class="relative group/slider">
                     <button onclick="scrollSlider('home-history-slider', -1)" class="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 sm:w-10 sm:h-10 bg-black/80 hover:bg-m3-primary hover:text-m3-onPrimary rounded-full text-white hidden md:flex items-center justify-center opacity-0 group-hover/slider:opacity-100 transition-all duration-300 backdrop-blur-md border border-white/10 shadow-lg cursor-pointer"><i class="fa-solid fa-chevron-left text-sm sm:text-base"></i></button>
                     
-                    <div class="flex overflow-x-auto gap-4 pt-1 pb-4 hide-scrollbar md:snap-x md:snap-proximity scroll-smooth" id="home-history-slider">
+                    <div class="flex overflow-x-auto gap-4 pt-1 pb-4 hide-scrollbar snap-x snap-mandatory scroll-smooth" id="home-history-slider">
                         <!-- Заполняется через JS из localStorage -->
                     </div>
 
@@ -598,89 +585,12 @@
             });
         }
 
-        // Ручной drag-scroll для горизонтальных лент (карусель "Популярное сейчас" / "Вы смотрели").
-        // На части мобильных браузеров нативный overflow-x-scroll ведёт себя нестабильно с одним
-        // пальцем (нужно 2 пальца) — здесь скролл полностью считается вручную по pointer-событиям,
-        // что работает одинаково надёжно и с мышью, и с одним пальцем на телефоне.
-        function enableDragScroll(el) {
-            if (!el) return;
-            let isDown = false;
-            let moved = false;
-            let startX = 0;
-            let startScrollLeft = 0;
-            let lastX = 0;
-            let lastT = 0;
-            let velocity = 0;
-            let momentumId = null;
-
-            function stopMomentum() {
-                if (momentumId) { cancelAnimationFrame(momentumId); momentumId = null; }
-            }
-
-            function onDown(e) {
-                stopMomentum();
-                isDown = true;
-                moved = false;
-                startX = e.clientX;
-                startScrollLeft = el.scrollLeft;
-                lastX = e.clientX;
-                lastT = Date.now();
-                velocity = 0;
-                el.classList.add('is-dragging');
-                try { el.setPointerCapture(e.pointerId); } catch (err) {}
-            }
-
-            function onMove(e) {
-                if (!isDown) return;
-                const dx = e.clientX - startX;
-                if (Math.abs(dx) > 4) moved = true;
-                el.scrollLeft = startScrollLeft - dx;
-
-                const now = Date.now();
-                const dt = now - lastT;
-                if (dt > 0) {
-                    velocity = (e.clientX - lastX) / dt; // px за мс
-                    lastX = e.clientX;
-                    lastT = now;
-                }
-            }
-
-            function onUp() {
-                if (!isDown) return;
-                isDown = false;
-                el.classList.remove('is-dragging');
-
-                // Небольшая инерция после отпускания — привычное ощущение нативного скролла
-                let v = velocity * 16;
-                function step() {
-                    if (Math.abs(v) < 0.5) { momentumId = null; return; }
-                    el.scrollLeft -= v;
-                    v *= 0.94;
-                    momentumId = requestAnimationFrame(step);
-                }
-                if (Math.abs(v) > 0.5) momentumId = requestAnimationFrame(step);
-            }
-
-            el.addEventListener('pointerdown', onDown);
-            el.addEventListener('pointermove', onMove);
-            el.addEventListener('pointerup', onUp);
-            el.addEventListener('pointercancel', onUp);
-            el.addEventListener('pointerleave', onUp);
-
-            // Если это был драг, а не тап — гасим клик по карточке, чтобы не открывался плеер случайно
-            el.addEventListener('click', function (e) {
-                if (moved) { e.preventDefault(); e.stopPropagation(); }
-            }, true);
-        }
-
         // On Load initialization
         window.onload = function() {
             switchNavTab('home');
             loadHomeData(); 
             renderHistory(); 
             updateSettingsUIActiveStates(); // Отражаем сохранённую тему в разделе "Настройки"
-            enableDragScroll(document.getElementById('home-popular-slider'));
-            enableDragScroll(document.getElementById('home-history-slider'));
             
             // Close suggestions when clicking outside
             document.addEventListener('click', function(e) {
