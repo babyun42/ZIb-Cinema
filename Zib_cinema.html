@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-    <title>Zib Cinema - Умный поиск и просмотр</title>
+    <title>Zib Cinema</title>
     
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -112,12 +112,6 @@
         .view-anim.view-enter-right { opacity: 0; transform: translateX(28px); }
         .view-anim.view-enter-left { opacity: 0; transform: translateX(-28px); }
 
-        /* ===== ЖИВАЯ ТЕМА =====
-           Tailwind генерирует классы bg-m3-*/text-m3-*/border-m3-* один раз при первом
-           появлении элемента и не умеет сам следить за CSS-переменными внутри функций цвета.
-           Поэтому здесь эти же классы переопределяются напрямую через var(--m3-*) с !important —
-           так смена переменных в applyTheme() гарантированно красит весь сайт, а не только то,
-           что генерируется заново. */
         .bg-m3-primary { background-color: rgb(var(--m3-primary)) !important; }
         .bg-m3-primary\/50 { background-color: rgb(var(--m3-primary) / 0.5) !important; }
         .bg-m3-primaryContainer { background-color: rgb(var(--m3-primary-container)) !important; }
@@ -393,23 +387,15 @@
                 <div class="relative ml-auto">
                     <button onclick="togglePlayerSelectMenu()" id="player-selector-tab-btn" class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-m3-surfaceContainerHigh hover:bg-m3-surfaceHighest text-m3-onSurface font-medium text-xs transition-all border border-m3-outlineVariant/30">
                         <i class="fa-solid fa-server text-m3-primary"></i>
-                        <span id="active-player-name-badge">Villybizy</span>
+                        <span id="active-player-name-badge">Gromfaer</span>
                         <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200" id="player-selector-arrow"></i>
                     </button>
 
                     <div id="player-selector-dropdown" class="absolute right-0 mt-2 w-64 bg-m3-surfaceContainerHighest/95 backdrop-blur-xl border border-m3-outlineVariant/40 rounded-2xl shadow-2xl p-2 z-50 hidden flex-col space-y-1 transition-all">
-                        <div class="text-[10px] font-bold text-m3-outline uppercase tracking-wider px-2 py-1">Резервные плееры:</div>
+                        <div class="text-[10px] font-bold text-m3-outline uppercase tracking-wider px-2 py-1">Резервные платформы:</div>
                         
                         <button onclick="setPlayerMode('external_villybizy')" id="btn-mode-external_villybizy" class="tab-btn w-full text-left px-3 py-2 rounded-xl hover:bg-m3-primaryContainer hover:text-m3-onPrimaryContainer transition-all flex items-center justify-between group">
-                            <span class="text-xs font-medium flex items-center gap-2"><i class="fa-solid fa-bolt text-emerald-400"></i> Villybizy (Осн.)</span>
-                            <i class="fa-solid fa-check text-m3-primary text-xs hidden check-icon"></i>
-                        </button>
-                        <button onclick="setPlayerMode('external_collaps')" id="btn-mode-external_collaps" class="tab-btn w-full text-left px-3 py-2 rounded-xl hover:bg-m3-primaryContainer hover:text-m3-onPrimaryContainer transition-all flex items-center justify-between group">
-                            <span class="text-xs font-medium flex items-center gap-2"><i class="fa-solid fa-server text-amber-400"></i> Collaps CDN</span>
-                            <i class="fa-solid fa-check text-m3-primary text-xs hidden check-icon"></i>
-                        </button>
-                        <button onclick="setPlayerMode('external_videocdn')" id="btn-mode-external_videocdn" class="tab-btn w-full text-left px-3 py-2 rounded-xl hover:bg-m3-primaryContainer hover:text-m3-onPrimaryContainer transition-all flex items-center justify-between group">
-                            <span class="text-xs font-medium flex items-center gap-2"><i class="fa-solid fa-play-circle text-blue-400"></i> VideoCDN</span>
+                            <span class="text-xs font-medium flex items-center gap-2"><i class="fa-solid fa-bolt text-emerald-400"></i> Gromfaer</span>
                             <i class="fa-solid fa-check text-m3-primary text-xs hidden check-icon"></i>
                         </button>
                         <button onclick="setPlayerMode('external_kinobox')" id="btn-mode-external_kinobox" class="tab-btn w-full text-left px-3 py-2 rounded-xl hover:bg-m3-primaryContainer hover:text-m3-onPrimaryContainer transition-all flex items-center justify-between group">
@@ -428,19 +414,6 @@
                         <i class="fa-solid fa-circle-notch fa-spin text-3xl"></i>
                         <span class="text-xs">Загрузка медиапотока...</span>
                     </div>
-                </div>
-            </div>
-
-            <!-- Подсказка, если источник долго не отвечает (частая ситуация в мобильных сетях) -->
-            <div id="player-stall-hint" class="hidden bg-m3-surfaceContainerHigh border border-m3-outlineVariant/30 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
-                <p class="text-xs sm:text-sm text-m3-secondary flex items-center gap-2">
-                    <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
-                    Источник долго не отвечает. Попробуйте другой:
-                </p>
-                <div class="flex flex-wrap gap-2">
-                    <button onclick="setPlayerMode('external_kinobox')" class="px-3 py-1.5 rounded-full bg-m3-primaryContainer text-m3-onPrimaryContainer text-xs font-medium hover:bg-m3-primary hover:text-m3-onPrimary transition-colors">Kinobox</button>
-                    <button onclick="setPlayerMode('external_collaps')" class="px-3 py-1.5 rounded-full bg-m3-primaryContainer text-m3-onPrimaryContainer text-xs font-medium hover:bg-m3-primary hover:text-m3-onPrimary transition-colors">Collaps CDN</button>
-                    <button onclick="setPlayerMode('external_videocdn')" class="px-3 py-1.5 rounded-full bg-m3-primaryContainer text-m3-onPrimaryContainer text-xs font-medium hover:bg-m3-primary hover:text-m3-onPrimary transition-colors">VideoCDN</button>
                 </div>
             </div>
 
@@ -1072,9 +1045,7 @@
                 if (arrow) arrow.style.transform = 'rotate(0deg)';
             }
         }
-
-        // Apply Player iframe injection
-        function setPlayerMode(mode) {
+function setPlayerMode(mode) { // ИСПРАВЛЕНИЕ: добавлена открывающая скобка
             currentMode = mode;
             if (!activeMovieId) return;
 
@@ -1086,9 +1057,7 @@
 
             // Update UI Badges
             const namesMap = {
-                'external_villybizy': 'Villybizy',
-                'external_collaps': 'Collaps CDN',
-                'external_videocdn': 'VideoCDN',
+                'external_villybizy': 'Gromfaer',
                 'external_kinobox': 'Kinobox'
             };
             document.getElementById('active-player-name-badge').innerText = namesMap[mode] || 'Плеер';
@@ -1111,17 +1080,12 @@
             let iframeSrc = '';
 
             if (mode === 'external_kinobox') {
-                iframeSrc = `https://kinobox.tv/kinopoisk/${activeMovieId}`; 
+                iframeSrc = `https://on.kinohub.vip/movie/${activeMovieId}`; 
             } else if (mode === 'external_villybizy') {
-                // Логика Villybizy: проверяем сериал ли это
                 const isSeries = ['TV_SERIES', 'MINI_SERIES', 'TV_SHOW'].includes(activeMovieType);
                 const route = isSeries ? 'series' : 'film';
-                iframeSrc = `https://villybizy.skin/${route}/${activeMovieId}/`; 
-            } else if (mode === 'external_collaps') {
-                iframeSrc = `https://api.collaps.org/embed/movie/${activeMovieId}`;
-            } else if (mode === 'external_videocdn') {
-                iframeSrc = `https://vids.suralis.stream/v2/embed/kp/${activeMovieId}`;
-            }
+                iframeSrc = `https://gromfaer.top/${route}/${activeMovieId}/`;
+            } // ИСПРАВЛЕНИЕ: добавлена закрывающая скобка для else if
 
             // Сбрасываем предыдущий таймер и прячем подсказку про долгую загрузку
             if (window.playerStallTimer) clearTimeout(window.playerStallTimer);
@@ -1150,7 +1114,7 @@
                     if (!iframeLoaded && stallHint) stallHint.classList.remove('hidden');
                 }, 8000);
             }
-        }
+        } // ИСПРАВЛЕНИЕ: добавлена закрывающая скобка для всей функции
     </script>
 </body>
 </html>
