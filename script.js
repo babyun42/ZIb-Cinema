@@ -636,7 +636,7 @@ function setPlayerMode(mode) {
     } else if (mode === 'external_villybizy') {
         const isSeries = ['TV_SERIES', 'MINI_SERIES', 'TV_SHOW'].includes(activeMovieType);
         const route = isSeries ? 'series' : 'film';
-        iframeSrc = `https://gromfaer.top/${route}/${activeMovieId}/`;
+        iframeSrc = `https://gromfaer.cc/${route}/${activeMovieId}/`;
     }
 
     if (window.playerStallTimer) clearTimeout(window.playerStallTimer);
