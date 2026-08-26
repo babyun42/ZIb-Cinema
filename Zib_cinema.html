@@ -402,6 +402,10 @@
                             <span class="text-xs font-medium flex items-center gap-2"><i class="fa-solid fa-box text-purple-400"></i> Kinobox</span>
                             <i class="fa-solid fa-check text-m3-primary text-xs hidden check-icon"></i>
                         </button>
+                        <button onclick="setPlayerMode('external_gokino')" id="btn-mode-external_gokino" class="tab-btn w-full text-left px-3 py-2 rounded-xl hover:bg-m3-primaryContainer hover:text-m3-onPrimaryContainer transition-all flex items-center justify-between group">
+                            <span class="text-xs font-medium flex items-center gap-2"><i class="fa-solid fa-brush text-orange-400"></i> Gokino</span>
+                            <i class="fa-solid fa-check text-m3-primary text-xs hidden check-icon"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1058,7 +1062,8 @@ function setPlayerMode(mode) { // ИСПРАВЛЕНИЕ: добавлена о�
             // Update UI Badges
             const namesMap = {
                 'external_villybizy': 'Gromfaer',
-                'external_kinobox': 'Kinobox'
+                'external_kinobox': 'Kinobox',
+                'external_gokino' : 'Gokino'
             };
             document.getElementById('active-player-name-badge').innerText = namesMap[mode] || 'Плеер';
 
@@ -1084,9 +1089,10 @@ function setPlayerMode(mode) { // ИСПРАВЛЕНИЕ: добавлена о�
             } else if (mode === 'external_villybizy') {
                 const isSeries = ['TV_SERIES', 'MINI_SERIES', 'TV_SHOW'].includes(activeMovieType);
                 const route = isSeries ? 'series' : 'film';
-                iframeSrc = `https://gromfaer.top/${route}/${activeMovieId}/`;
-            } // ИСПРАВЛЕНИЕ: добавлена закрывающая скобка для else if
-
+                iframeSrc = `https://gromfaer.сс/${route}/${activeMovieId}/`;
+            } else if (mode === 'external_gokino') {
+                iframeSrc = `https://matrix.gokino.by/search.php?q=${activeMovieId}`;
+            }
             // Сбрасываем предыдущий таймер и прячем подсказку про долгую загрузку
             if (window.playerStallTimer) clearTimeout(window.playerStallTimer);
             const stallHint = document.getElementById('player-stall-hint');

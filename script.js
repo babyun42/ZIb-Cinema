@@ -611,7 +611,8 @@ function setPlayerMode(mode) {
 
     const namesMap = {
         'external_villybizy': 'Gromfaer',
-        'external_kinobox': 'Kinobox'
+        'external_kinobox': 'Kinobox',
+        'external_gokino' : 'Gokino'
     };
     const badge = document.getElementById('active-player-name-badge');
     if (badge) badge.innerText = namesMap[mode] || 'Плеер';
@@ -637,6 +638,8 @@ function setPlayerMode(mode) {
         const isSeries = ['TV_SERIES', 'MINI_SERIES', 'TV_SHOW'].includes(activeMovieType);
         const route = isSeries ? 'series' : 'film';
         iframeSrc = `https://gromfaer.cc/${route}/${activeMovieId}/`;
+    } else if (mode === 'external_gokino') {
+        iframeSrc = `https://matrix.gokino.by/search.php?q=${activeMovieId}`; 
     }
 
     if (window.playerStallTimer) clearTimeout(window.playerStallTimer);
