@@ -610,7 +610,7 @@ function setPlayerMode(mode) {
     if (arrow) arrow.style.transform = 'rotate(0deg)';
 
     const namesMap = {
-        'external_villybizy': 'Gromfaer',
+        'external_villybizy': 'SSpoisk',
         'external_kinobox': 'Kinobox',
         'external_gokino' : 'Gokino'
     };
@@ -637,7 +637,7 @@ function setPlayerMode(mode) {
     } else if (mode === 'external_villybizy') {
         const isSeries = ['TV_SERIES', 'MINI_SERIES', 'TV_SHOW'].includes(activeMovieType);
         const route = isSeries ? 'series' : 'film';
-        iframeSrc = `https://gromfaer.cc/${route}/${activeMovieId}/`;
+        iframeSrc = `https://bulkikim.sbs/${route}/${activeMovieId}/`;
     } else if (mode === 'external_gokino') {
         iframeSrc = `https://matrix.gokino.by/search.php?q=${activeMovieId}`; 
     }
