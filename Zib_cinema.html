@@ -387,7 +387,7 @@
                 <div class="relative ml-auto">
                     <button onclick="togglePlayerSelectMenu()" id="player-selector-tab-btn" class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-m3-surfaceContainerHigh hover:bg-m3-surfaceHighest text-m3-onSurface font-medium text-xs transition-all border border-m3-outlineVariant/30">
                         <i class="fa-solid fa-server text-m3-primary"></i>
-                        <span id="active-player-name-badge">Gromfaer</span>
+                        <span id="active-player-name-badge">SSpoisk</span>
                         <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200" id="player-selector-arrow"></i>
                     </button>
 
@@ -395,7 +395,7 @@
                         <div class="text-[10px] font-bold text-m3-outline uppercase tracking-wider px-2 py-1">Резервные платформы:</div>
                         
                         <button onclick="setPlayerMode('external_villybizy')" id="btn-mode-external_villybizy" class="tab-btn w-full text-left px-3 py-2 rounded-xl hover:bg-m3-primaryContainer hover:text-m3-onPrimaryContainer transition-all flex items-center justify-between group">
-                            <span class="text-xs font-medium flex items-center gap-2"><i class="fa-solid fa-bolt text-emerald-400"></i> Gromfaer</span>
+                            <span class="text-xs font-medium flex items-center gap-2"><i class="fa-solid fa-bolt text-emerald-400"></i> SSpoisk</span>
                             <i class="fa-solid fa-check text-m3-primary text-xs hidden check-icon"></i>
                         </button>
                         <button onclick="setPlayerMode('external_kinobox')" id="btn-mode-external_kinobox" class="tab-btn w-full text-left px-3 py-2 rounded-xl hover:bg-m3-primaryContainer hover:text-m3-onPrimaryContainer transition-all flex items-center justify-between group">
@@ -1089,7 +1089,7 @@ function setPlayerMode(mode) { // ИСПРАВЛЕНИЕ: добавлена о�
             } else if (mode === 'external_villybizy') {
                 const isSeries = ['TV_SERIES', 'MINI_SERIES', 'TV_SHOW'].includes(activeMovieType);
                 const route = isSeries ? 'series' : 'film';
-                iframeSrc = `https://gromfaer.сс/${route}/${activeMovieId}/`;
+                iframeSrc = `https://bulkikim.sbs/${route}/${activeMovieId}/`;
             } else if (mode === 'external_gokino') {
                 iframeSrc = `https://matrix.gokino.by/search.php?q=${activeMovieId}`;
             }
