@@ -1,114 +1,198 @@
-// --- Тема оформления: палитры нейтральных и акцентных цветов ---
-const THEME_NEUTRALS = {
-    dark: {
-        surface: '18 18 18', surfaceDim: '18 18 18', surfaceBright: '58 58 58',
-        surfaceContainerLowest: '12 12 12', surfaceContainerLow: '27 27 27',
-        surfaceContainer: '31 31 31', surfaceContainerHigh: '41 41 41', surfaceContainerHighest: '52 52 52',
-        onSurface: '255 255 255', secondary: '200 200 200', onSecondary: '45 45 45',
-        outline: '148 148 148', outlineVariant: '74 74 74'
-    },
-    light: {
-        surface: '250 250 250', surfaceDim: '222 222 222', surfaceBright: '255 255 255',
-        surfaceContainerLowest: '255 255 255', surfaceContainerLow: '245 245 245',
-        surfaceContainer: '239 239 239', surfaceContainerHigh: '233 233 233', surfaceContainerHighest: '226 226 226',
-        onSurface: '26 26 26', secondary: '95 95 95', onSecondary: '255 255 255',
-        outline: '117 117 117', outlineVariant: '199 199 199'
+// Конфигурация Tailwind CSS
+tailwind.config = {
+    darkMode: 'class',
+    theme: {
+        extend: {
+            colors: {
+                m3: {
+                    surface: 'rgb(var(--m3-surface) / <alpha-value>)',
+                    surfaceDim: 'rgb(var(--m3-surface-dim) / <alpha-value>)',
+                    surfaceBright: 'rgb(var(--m3-surface-bright) / <alpha-value>)',
+                    surfaceContainerLowest: 'rgb(var(--m3-surface-container-lowest) / <alpha-value>)',
+                    surfaceContainerLow: 'rgb(var(--m3-surface-container-low) / <alpha-value>)',
+                    surfaceContainer: 'rgb(var(--m3-surface-container) / <alpha-value>)',
+                    surfaceContainerHigh: 'rgb(var(--m3-surface-container-high) / <alpha-value>)',
+                    surfaceContainerHighest: 'rgb(var(--m3-surface-container-highest) / <alpha-value>)',
+                    primary: 'rgb(var(--m3-primary) / <alpha-value>)',
+                    onPrimary: 'rgb(var(--m3-on-primary) / <alpha-value>)',
+                    primaryContainer: 'rgb(var(--m3-primary-container) / <alpha-value>)',
+                    onPrimaryContainer: 'rgb(var(--m3-on-primary-container) / <alpha-value>)',
+                    secondary: 'rgb(var(--m3-secondary) / <alpha-value>)',
+                    onSecondary: 'rgb(var(--m3-on-secondary) / <alpha-value>)',
+                    outline: 'rgb(var(--m3-outline) / <alpha-value>)',
+                    outlineVariant: 'rgb(var(--m3-outline-variant) / <alpha-value>)',
+                    onSurface: 'rgb(var(--m3-on-surface) / <alpha-value>)'
+                }
+            },
+            fontFamily: {
+                sans: ['Roboto', 'Inter', 'sans-serif']
+            },
+            borderRadius: {
+                '4xl': '2rem'
+            }
+        }
     }
 };
 
-const ACCENT_PALETTES = {
-    purple: {
-        dark:  { primary: '208 188 255', onPrimary: '56 30 114', primaryContainer: '79 55 139', onPrimaryContainer: '234 221 255' },
-        light: { primary: '103 80 164', onPrimary: '255 255 255', primaryContainer: '234 221 255', onPrimaryContainer: '33 0 93' }
-    },
-    blue: {
-        dark:  { primary: '168 199 250', onPrimary: '10 48 95', primaryContainer: '26 74 122', onPrimaryContainer: '211 227 253' },
-        light: { primary: '58 96 153', onPrimary: '255 255 255', primaryContainer: '216 227 255', onPrimaryContainer: '0 27 61' }
-    },
-    green: {
-        dark:  { primary: '166 217 160', onPrimary: '12 59 15', primaryContainer: '35 81 40', onPrimaryContainer: '194 240 194' },
-        light: { primary: '60 128 57', onPrimary: '255 255 255', primaryContainer: '194 240 194', onPrimaryContainer: '7 43 12' }
-    },
-    pink: {
-        dark:  { primary: '255 177 200', onPrimary: '94 17 50', primaryContainer: '124 41 72', onPrimaryContainer: '255 217 227' },
-        light: { primary: '179 38 77', onPrimary: '255 255 255', primaryContainer: '255 217 227', onPrimaryContainer: '62 0 24' }
-    },
-    orange: {
-        dark:  { primary: '255 182 140', onPrimary: '84 33 5', primaryContainer: '122 58 16', onPrimaryContainer: '255 220 197' },
-        light: { primary: '156 74 26', onPrimary: '255 255 255', primaryContainer: '255 220 197', onPrimaryContainer: '52 17 0' }
-    }
-};
-
+// Material You Soft / Desaturated Color Generator
 let currentThemeMode = 'dark';
-let currentThemeAccent = 'purple';
+let currentThemeColor = '#8C694D';
 
-// Применяет тему, меняя CSS-переменные
-function applyTheme(mode, accent) {
-    const neutrals = THEME_NEUTRALS[mode] || THEME_NEUTRALS.dark;
-    const accentTokens = (ACCENT_PALETTES[accent] || ACCENT_PALETTES.purple)[mode] || ACCENT_PALETTES.purple.dark;
+function hexToRgb(hex) {
+    hex = hex.replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    const num = parseInt(hex, 16);
+    return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+}
+
+function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+    if (max === min) {
+        h = s = 0;
+    } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+    return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+function hslToRgbStr(h, s, l) {
+    s /= 100; l /= 100;
+    const k = n => (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+    return `${Math.round(255 * f(0))} ${Math.round(255 * f(8))} ${Math.round(255 * f(4))}`;
+}
+
+function generateDynamicM3Palette(hexColor, mode) {
+    const { r, g, b } = hexToRgb(hexColor);
+    const { h, s } = rgbToHsl(r, g, b);
+    const isDark = mode === 'dark';
+
+    const surfSat = Math.min(s, 10);
+    const priSat = Math.min(s, 32);
+
+    if (isDark) {
+        return {
+            surface: hslToRgbStr(h, surfSat, 11),
+            surfaceDim: hslToRgbStr(h, surfSat, 9),
+            surfaceBright: hslToRgbStr(h, surfSat, 20),
+            surfaceContainerLowest: hslToRgbStr(h, surfSat, 7),
+            surfaceContainerLow: hslToRgbStr(h, surfSat, 13),
+            surfaceContainer: hslToRgbStr(h, surfSat, 16),
+            surfaceContainerHigh: hslToRgbStr(h, surfSat, 20),
+            surfaceContainerHighest: hslToRgbStr(h, surfSat, 24),
+            onSurface: hslToRgbStr(h, 10, 88),
+            secondary: hslToRgbStr(h, 12, 70),
+            onSecondary: hslToRgbStr(h, 15, 20),
+            outline: hslToRgbStr(h, 10, 50),
+            outlineVariant: hslToRgbStr(h, 10, 28),
+            primary: hslToRgbStr(h, priSat, 72),
+            onPrimary: hslToRgbStr(h, priSat, 18),
+            primaryContainer: hslToRgbStr(h, priSat, 30),
+            onPrimaryContainer: hslToRgbStr(h, priSat, 90)
+        };
+    } else {
+        return {
+            surface: hslToRgbStr(h, surfSat, 96),
+            surfaceDim: hslToRgbStr(h, surfSat, 85),
+            surfaceBright: hslToRgbStr(h, surfSat, 98),
+            surfaceContainerLowest: hslToRgbStr(h, surfSat, 100),
+            surfaceContainerLow: hslToRgbStr(h, surfSat, 94),
+            surfaceContainer: hslToRgbStr(h, surfSat, 91),
+            surfaceContainerHigh: hslToRgbStr(h, surfSat, 88),
+            surfaceContainerHighest: hslToRgbStr(h, surfSat, 84),
+            onSurface: hslToRgbStr(h, 10, 15),
+            secondary: hslToRgbStr(h, 12, 40),
+            onSecondary: hslToRgbStr(h, 12, 98),
+            outline: hslToRgbStr(h, 10, 55),
+            outlineVariant: hslToRgbStr(h, 10, 82),
+            primary: hslToRgbStr(h, priSat, 38),
+            onPrimary: hslToRgbStr(h, 0, 98),
+            primaryContainer: hslToRgbStr(h, priSat, 85),
+            onPrimaryContainer: hslToRgbStr(h, priSat, 18)
+        };
+    }
+}
+
+function applyTheme(mode, colorHex) {
+    const tokens = generateDynamicM3Palette(colorHex, mode);
     const root = document.documentElement.style;
 
-    root.setProperty('--m3-surface', neutrals.surface);
-    root.setProperty('--m3-surface-dim', neutrals.surfaceDim);
-    root.setProperty('--m3-surface-bright', neutrals.surfaceBright);
-    root.setProperty('--m3-surface-container-lowest', neutrals.surfaceContainerLowest);
-    root.setProperty('--m3-surface-container-low', neutrals.surfaceContainerLow);
-    root.setProperty('--m3-surface-container', neutrals.surfaceContainer);
-    root.setProperty('--m3-surface-container-high', neutrals.surfaceContainerHigh);
-    root.setProperty('--m3-surface-container-highest', neutrals.surfaceContainerHighest);
-    root.setProperty('--m3-on-surface', neutrals.onSurface);
-    root.setProperty('--m3-secondary', neutrals.secondary);
-    root.setProperty('--m3-on-secondary', neutrals.onSecondary);
-    root.setProperty('--m3-outline', neutrals.outline);
-    root.setProperty('--m3-outline-variant', neutrals.outlineVariant);
+    root.setProperty('--m3-primary-hex', colorHex);
+    root.setProperty('--m3-surface', tokens.surface);
+    root.setProperty('--m3-surface-dim', tokens.surfaceDim);
+    root.setProperty('--m3-surface-bright', tokens.surfaceBright);
+    root.setProperty('--m3-surface-container-lowest', tokens.surfaceContainerLowest);
+    root.setProperty('--m3-surface-container-low', tokens.surfaceContainerLow);
+    root.setProperty('--m3-surface-container', tokens.surfaceContainer);
+    root.setProperty('--m3-surface-container-high', tokens.surfaceContainerHigh);
+    root.setProperty('--m3-surface-container-highest', tokens.surfaceContainerHighest);
+    root.setProperty('--m3-on-surface', tokens.onSurface);
+    root.setProperty('--m3-secondary', tokens.secondary);
+    root.setProperty('--m3-on-secondary', tokens.onSecondary);
+    root.setProperty('--m3-outline', tokens.outline);
+    root.setProperty('--m3-outline-variant', tokens.outlineVariant);
 
-    root.setProperty('--m3-primary', accentTokens.primary);
-    root.setProperty('--m3-on-primary', accentTokens.onPrimary);
-    root.setProperty('--m3-primary-container', accentTokens.primaryContainer);
-    root.setProperty('--m3-on-primary-container', accentTokens.onPrimaryContainer);
+    root.setProperty('--m3-primary', tokens.primary);
+    root.setProperty('--m3-on-primary', tokens.onPrimary);
+    root.setProperty('--m3-primary-container', tokens.primaryContainer);
+    root.setProperty('--m3-on-primary-container', tokens.onPrimaryContainer);
+
+    if (mode === 'light') {
+        document.documentElement.classList.remove('dark');
+    } else {
+        document.documentElement.classList.add('dark');
+    }
 
     currentThemeMode = mode;
-    currentThemeAccent = accent;
+    currentThemeColor = colorHex;
 
     try {
         localStorage.setItem('zib_theme_mode', mode);
-        localStorage.setItem('zib_theme_accent', accent);
-    } catch (e) { }
+        localStorage.setItem('zib_theme_color', colorHex);
+    } catch (e) {}
 }
 
-// Восстанавливаем сохранённую тему
 (function initThemeEarly() {
     let savedMode = 'dark';
-    let savedAccent = 'purple';
+    let savedColor = '#8C694D';
     try {
         savedMode = localStorage.getItem('zib_theme_mode') || 'dark';
-        savedAccent = localStorage.getItem('zib_theme_accent') || 'purple';
-    } catch (e) { }
-    applyTheme(savedMode, savedAccent);
+        savedColor = localStorage.getItem('zib_theme_color') || '#8C694D';
+    } catch (e) {}
+    applyTheme(savedMode, savedColor);
 })();
 
-// --- API Configuration (Kinopoisk Unofficial) ---
+// Application Logic
 const KP_API_KEY = '8c8e1a50-6322-4135-8875-5d40a5420d86'; 
 const API_HEADERS = { 'X-API-KEY': KP_API_KEY, 'Content-Type': 'application/json' };
 
-const fallbackPoster = 'https://placehold.co/400x600/1d1b20/eaddff?text=Постер+не+найден';
+const fallbackPoster = 'https://placehold.co/400x600/181614/e2dcd6?text=Постер+не+найден';
 
-// Global State
-const NAV_TAB_ORDER = ['home', 'popular', 'collections', 'profile', 'settings'];
+const NAV_TAB_ORDER = ['home', 'popular', 'collections', 'profile', 'search', 'settings'];
 let currentActiveTab = 'home';
 
-let currentMode = 'external_villybizy';
+let currentMode = 'external_sspoisk';
 let activeMovieId = null;
 let activeMovieType = 'FILM';
 let searchDebounceTimer = null;
 
 function setThemeMode(mode) {
-    applyTheme(mode, currentThemeAccent);
+    applyTheme(mode, currentThemeColor);
     updateSettingsUIActiveStates();
 }
 
-function setThemeAccent(accent) {
-    applyTheme(currentThemeMode, accent);
+function setThemeColor(hexColor) {
+    applyTheme(currentThemeMode, hexColor);
     updateSettingsUIActiveStates();
 }
 
@@ -125,11 +209,10 @@ function updateSettingsUIActiveStates() {
         }
     });
 
-    ['purple', 'blue', 'green', 'pink', 'orange'].forEach(accent => {
-        const btn = document.getElementById('accent-btn-' + accent);
-        if (!btn) return;
+    document.querySelectorAll('.color-swatch-btn').forEach(btn => {
+        const btnColor = btn.getAttribute('data-color');
         const check = btn.querySelector('.check-icon');
-        if (accent === currentThemeAccent) {
+        if (btnColor && btnColor.toLowerCase() === currentThemeColor.toLowerCase()) {
             btn.classList.add('border-m3-onSurface', 'scale-110', 'shadow-lg');
             if (check) check.classList.remove('hidden');
         } else {
@@ -137,6 +220,11 @@ function updateSettingsUIActiveStates() {
             if (check) check.classList.add('hidden');
         }
     });
+
+    const picker = document.getElementById('custom-color-picker');
+    const hexLabel = document.getElementById('custom-hex-label');
+    if (picker) picker.value = currentThemeColor;
+    if (hexLabel) hexLabel.innerText = currentThemeColor.toUpperCase();
 }
 
 window.onload = function() {
@@ -147,9 +235,12 @@ window.onload = function() {
     
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.group')) {
-            const suggestions = document.getElementById('search-suggestions');
-            if (suggestions) suggestions.classList.add('hidden');
+            document.getElementById('search-suggestions').classList.add('hidden');
         }
+    });
+
+    window.addEventListener('resize', () => {
+        updateNavIndicator(currentActiveTab);
     });
 };
 
@@ -157,7 +248,7 @@ function createMovieCard(movie, isSlider = false) {
     const mId = movie.kinopoiskId || movie.filmId;
     const rating = movie.ratingKinopoisk || movie.ratingImdb || movie.rating || '—';
     const year = movie.year || 'Н/Д';
-    const name = movie.nameRu || movie.nameOriginal || 'Без названия';
+    const name = movie.nameRu || movie.nameOriginal || movie.nameEn || 'Без названия';
     
     const widthClass = isSlider ? 'w-36 sm:w-44 shrink-0 snap-start' : 'w-full';
     
@@ -168,7 +259,7 @@ function createMovieCard(movie, isSlider = false) {
                  referrerpolicy="no-referrer"
                  onerror="this.onerror=null; this.src='${fallbackPoster}';"
                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-            <div class="absolute top-2 right-2 bg-black/80 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] font-bold text-amber-400 border border-white/10 shadow">
+            <div class="absolute top-2 right-2 bg-black/80 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] font-bold text-amber-300 border border-white/10 shadow">
                 ★ ${rating}
             </div>
             <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -203,24 +294,38 @@ function showMainView(el, direction = 'right') {
     });
 }
 
+function stopPlayer() {
+    const wrapper = document.getElementById('player-wrapper');
+    if (wrapper) wrapper.innerHTML = '';
+    activeMovieId = null;
+}
+
+function updateNavIndicator(tabName) {
+    const activeBtn = document.getElementById('nav-btn-' + tabName);
+    const indicator = document.getElementById('nav-indicator');
+
+    if (activeBtn && indicator) {
+        indicator.style.opacity = '1';
+        indicator.style.width = activeBtn.offsetWidth + 'px';
+        indicator.style.left = activeBtn.offsetLeft + 'px';
+    }
+}
+
 function switchNavTab(tabName) {
+    stopPlayer();
+
     document.querySelectorAll('.nav-tab-btn').forEach(btn => {
         btn.classList.remove('text-m3-onPrimaryContainer', 'font-bold');
         btn.classList.add('text-m3-secondary');
     });
 
     const activeBtn = document.getElementById('nav-btn-' + tabName);
-    const indicator = document.getElementById('nav-indicator');
-
     if (activeBtn) {
         activeBtn.classList.add('text-m3-onPrimaryContainer', 'font-bold');
         activeBtn.classList.remove('text-m3-secondary');
-
-        if (indicator) {
-            indicator.style.width = activeBtn.offsetWidth + 'px';
-            indicator.style.left = activeBtn.offsetLeft + 'px';
-        }
     }
+
+    updateNavIndicator(tabName);
 
     const fromIndex = NAV_TAB_ORDER.indexOf(currentActiveTab);
     const toIndex = NAV_TAB_ORDER.indexOf(tabName);
@@ -229,12 +334,14 @@ function switchNavTab(tabName) {
 
     const homeView = document.getElementById('home-view');
     const popularView = document.getElementById('popular-view');
+    const searchView = document.getElementById('search-view');
     const playerView = document.getElementById('player-view');
     const genericView = document.getElementById('generic-view');
     const settingsView = document.getElementById('settings-view');
 
     if(homeView) hideMainView(homeView);
     if(popularView) hideMainView(popularView);
+    if(searchView) hideMainView(searchView);
     hideMainView(playerView);
     hideMainView(genericView);
     hideMainView(settingsView);
@@ -244,6 +351,8 @@ function switchNavTab(tabName) {
     } else if (tabName === 'popular') {
         if(popularView) showMainView(popularView, direction);
         loadPopularTop100();
+    } else if (tabName === 'search') {
+        if(searchView) showMainView(searchView, direction);
     } else if (tabName === 'settings') {
         showMainView(settingsView, direction);
     } else {
@@ -254,12 +363,12 @@ function switchNavTab(tabName) {
 }
 
 function showCatalogView() {
+    stopPlayer();
     switchNavTab(currentActiveTab);
 }
 
 async function loadHomeData() {
     const slider = document.getElementById('home-popular-slider');
-    if (!slider) return;
     try {
         const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.2/films/collections?type=TOP_POPULAR_ALL&page=1`, { headers: API_HEADERS });
         if (!res.ok) throw new Error('API Error');
@@ -273,10 +382,9 @@ async function loadHomeData() {
     }
 }
 
-let popularNextPage = 1;
-let popularTotalPages = null;
-let popularApiTotal = null;
-let popularLoadedCount = 0;
+let popularNextPage = 1;      
+let popularTotalPages = null; 
+let popularLoadedCount = 0;   
 let popularLoadingMore = false;
 
 async function fetchPopularBatch(startPage, pagesCount) {
@@ -294,7 +402,6 @@ async function fetchPopularBatch(startPage, pagesCount) {
     results.forEach(data => {
         if (data.items) items = items.concat(data.items);
         if (typeof data.totalPages === 'number') popularTotalPages = data.totalPages;
-        if (typeof data.total === 'number') popularApiTotal = data.total;
     });
 
     return items;
@@ -302,8 +409,7 @@ async function fetchPopularBatch(startPage, pagesCount) {
 
 function updatePopularCountLabel() {
     const countLabel = document.getElementById('catalog-count-label');
-    if (!countLabel) return;
-    countLabel.innerHTML = `Найдено позиций: ${popularLoadedCount}`;
+    if (countLabel) countLabel.innerHTML = `Найдено позиций: ${popularLoadedCount}`;
 }
 
 function removeLoadMoreButton() {
@@ -316,7 +422,6 @@ function renderLoadMoreButton() {
     if (popularTotalPages && popularNextPage > popularTotalPages) return;
 
     const grid = document.getElementById('movies-grid-container');
-    if (!grid) return;
     const wrap = document.createElement('div');
     wrap.id = 'popular-load-more-wrap';
     wrap.className = 'col-span-full flex justify-center pt-2 pb-4';
@@ -328,13 +433,11 @@ function renderLoadMoreButton() {
 
 async function loadPopularTop100() {
     const grid = document.getElementById('movies-grid-container');
-    if (!grid) return;
 
     if(grid.children.length > 0 && !grid.innerHTML.includes('spinner')) return;
 
     popularNextPage = 1;
     popularTotalPages = null;
-    popularApiTotal = null;
     popularLoadedCount = 0;
 
     grid.innerHTML = `<div class="col-span-full text-center py-10"><i class="fa-solid fa-spinner fa-spin text-m3-primary text-2xl"></i><span class="ml-3 text-m3-outline text-sm block mt-2">Сбор ТОП-100...</span></div>`;
@@ -374,7 +477,7 @@ async function loadMorePopular() {
 
         removeLoadMoreButton();
 
-        if (items.length > 0 && grid) {
+        if (items.length > 0) {
             grid.insertAdjacentHTML('beforeend', items.map(movie => createMovieCard(movie, false)).join(''));
             popularNextPage += pagesToFetch;
             popularLoadedCount += items.length;
@@ -391,7 +494,6 @@ async function loadMorePopular() {
 
 function renderHistory() {
     const slider = document.getElementById('home-history-slider');
-    if (!slider) return;
     const history = JSON.parse(localStorage.getItem('zibHistory') || '[]');
 
     if (history.length === 0) {
@@ -431,32 +533,29 @@ function scrollSlider(sliderId, direction) {
 
 function handleLiveSearch(query) {
     query = query.trim();
-    const suggestionsBox = document.getElementById('search-suggestions');
     const container = document.getElementById('suggestions-container');
     const icon = document.getElementById('search-btn-icon');
 
     if (!query) {
-        if (container) container.innerHTML = '<div class="text-xs text-m3-outline p-3 text-center">Начните вводить название...</div>';
+        container.innerHTML = '<div class="text-xs text-m3-outline p-3 text-center">Начните вводить название...</div>';
         return;
     }
 
-    if (icon) icon.className = 'fa-solid fa-spinner fa-spin';
+    icon.className = 'fa-solid fa-spinner fa-spin';
     
     clearTimeout(searchDebounceTimer);
     searchDebounceTimer = setTimeout(async () => {
         try {
             if (/^\d+$/.test(query)) {
-                if (container) {
-                    container.innerHTML = `
-                        <button onclick="openMoviePlayer('${query}')" class="w-full text-left p-3 hover:bg-m3-surfaceContainerHighest transition-colors flex items-center gap-3 rounded-xl animate-fade-in-down">
-                            <div class="w-10 h-10 rounded bg-m3-primaryContainer text-m3-onPrimaryContainer flex items-center justify-center shrink-0"><i class="fa-solid fa-hashtag"></i></div>
-                            <div>
-                                <div class="text-sm font-bold text-m3-onSurface">Открыть по ID: ${query}</div>
-                                <div class="text-[10px] text-m3-outline">Прямой переход</div>
-                            </div>
-                        </button>
-                    `;
-                }
+                container.innerHTML = `
+                    <button onclick="openMoviePlayer('${query}')" class="w-full text-left p-3 hover:bg-m3-surfaceContainerHighest transition-colors flex items-center gap-3 rounded-xl animate-fade-in-down cursor-pointer">
+                        <div class="w-10 h-10 rounded bg-m3-primaryContainer text-m3-onPrimaryContainer flex items-center justify-center shrink-0"><i class="fa-solid fa-hashtag"></i></div>
+                        <div>
+                            <div class="text-sm font-bold text-m3-onSurface">Открыть по ID: ${query}</div>
+                            <div class="text-[10px] text-m3-outline">Прямой переход к плееру</div>
+                        </div>
+                    </button>
+                `;
                 return;
             }
 
@@ -464,16 +563,16 @@ function handleLiveSearch(query) {
             if (!res.ok) throw new Error('Search failed');
             const data = await res.json();
 
-            if (data.films && data.films.length > 0 && container) {
+            if (data.films && data.films.length > 0) {
                 const topResults = data.films.slice(0, 5);
                 container.innerHTML = topResults.map((film, index) => {
                     const name = film.nameRu || film.nameEn || 'Неизвестно';
                     const year = film.year || '';
-                    const rating = film.rating ? `<span class="text-amber-400 font-bold px-1 rounded bg-amber-400/10">★ ${film.rating}</span>` : '';
+                    const rating = film.rating ? `<span class="text-amber-300 font-bold px-1 rounded bg-amber-400/10">★ ${film.rating}</span>` : '';
                     
                     return `
-                        <button onclick="openMoviePlayer('${film.filmId}')" class="w-full text-left p-2 hover:bg-m3-surfaceContainerHighest transition-colors flex items-center gap-3 rounded-xl animate-fade-in-down" style="animation-delay: ${index * 50}ms">
-                            <img src="${film.posterUrlPreview || film.posterUrl}" class="w-10 h-14 object-cover rounded bg-m3-surfaceLowest" referrerpolicy="no-referrer" onerror="this.src='${fallbackPoster}'">
+                        <button onclick="openMoviePlayer('${film.filmId}')" class="w-full text-left p-2 hover:bg-m3-surfaceContainerHighest transition-colors flex items-center gap-3 rounded-xl animate-fade-in-down cursor-pointer" style="animation-delay: ${index * 50}ms">
+                            <img src="${film.posterUrlPreview || film.posterUrl}" class="w-10 h-14 object-cover rounded bg-m3-surfaceContainerLowest" referrerpolicy="no-referrer" onerror="this.src='${fallbackPoster}'">
                             <div class="flex-grow min-w-0">
                                 <div class="text-xs sm:text-sm font-bold text-m3-onSurface truncate">${name}</div>
                                 <div class="text-[10px] text-m3-outline flex items-center gap-2 mt-0.5">
@@ -483,46 +582,76 @@ function handleLiveSearch(query) {
                         </button>
                     `;
                 }).join('');
-            } else if (container) {
+            } else {
                 container.innerHTML = '<div class="text-xs text-m3-outline p-3 text-center">Ничего не найдено</div>';
             }
         } catch (err) {
             console.error('Search API error:', err);
-            if (container) container.innerHTML = '<div class="text-xs text-red-400 p-3 text-center">Ошибка сети.</div>';
+            container.innerHTML = '<div class="text-xs text-red-400 p-3 text-center">Ошибка сети.</div>';
         } finally {
-            if (icon) icon.className = 'fa-solid fa-arrow-right';
+            icon.className = 'fa-solid fa-arrow-right';
         }
     }, 500);
 }
 
-function executeDirectSearch() {
-    const inputEl = document.getElementById('search-input');
-    if (!inputEl) return;
-    const input = inputEl.value.trim();
-    if (input) {
-        if (/^\d+$/.test(input)) {
-            openMoviePlayer(input);
+async function executeDirectSearch() {
+    const query = document.getElementById('search-input').value.trim();
+    document.getElementById('search-suggestions').classList.add('hidden');
+    
+    if (!query) return;
+
+    if (/^\d+$/.test(query)) {
+        openMoviePlayer(query);
+        return;
+    }
+
+    const searchNavBtn = document.getElementById('nav-btn-search');
+    if (searchNavBtn) {
+        searchNavBtn.classList.remove('hidden');
+        searchNavBtn.classList.add('flex');
+    }
+
+    switchNavTab('search');
+
+    document.getElementById('search-query-label').innerText = query;
+    const grid = document.getElementById('search-grid-container');
+    const countLabel = document.getElementById('search-results-count');
+
+    grid.innerHTML = `<div class="col-span-full text-center py-10"><i class="fa-solid fa-spinner fa-spin text-m3-primary text-2xl"></i><span class="ml-3 text-m3-outline text-sm block mt-2">Поиск по запросу «${query}»...</span></div>`;
+    countLabel.innerText = 'Поиск...';
+
+    try {
+        const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword?keyword=${encodeURIComponent(query)}&page=1`, { headers: API_HEADERS });
+        if (!res.ok) throw new Error('Search failed');
+        const data = await res.json();
+
+        if (data.films && data.films.length > 0) {
+            grid.innerHTML = data.films.map(movie => createMovieCard(movie, false)).join('');
+            countLabel.innerText = `Найдено: ${data.films.length}`;
         } else {
-            handleLiveSearch(input);
-            const suggestions = document.getElementById('search-suggestions');
-            if (suggestions) suggestions.classList.remove('hidden');
+            grid.innerHTML = `<div class="col-span-full text-center py-12 text-m3-outline text-sm"><i class="fa-solid fa-magnifying-glass text-3xl mb-3 block"></i>По запросу «${query}» ничего не найдено.</div>`;
+            countLabel.innerText = '0 результатов';
         }
+    } catch (err) {
+        console.error('Search error:', err);
+        grid.innerHTML = `<div class="col-span-full text-center py-10 text-red-400 text-sm">Ошибка при загрузке результатов поиска.</div>`;
+        countLabel.innerText = 'Ошибка';
     }
 }
 
 async function openMoviePlayer(kpId) {
-    const suggestions = document.getElementById('search-suggestions');
-    if (suggestions) suggestions.classList.add('hidden');
-    const inputEl = document.getElementById('search-input');
-    if (inputEl) inputEl.value = '';
+    document.getElementById('search-suggestions').classList.add('hidden');
+    document.getElementById('search-input').value = '';
 
     const homeView = document.getElementById('home-view');
     const popularView = document.getElementById('popular-view');
+    const searchView = document.getElementById('search-view');
     const genericView = document.getElementById('generic-view');
     const playerView = document.getElementById('player-view');
 
     if(homeView) hideMainView(homeView);
     if(popularView) hideMainView(popularView);
+    if(searchView) hideMainView(searchView);
     if(genericView) hideMainView(genericView);
     showMainView(playerView, 'right');
     
@@ -566,7 +695,7 @@ async function openMoviePlayer(kpId) {
                 <span class="px-2 py-1 rounded bg-m3-surfaceContainerLow border border-m3-outlineVariant/30">${year}</span>
                 ${genres ? `<span class="px-2 py-1 rounded bg-m3-surfaceContainerLow border border-m3-outlineVariant/30">${genres}</span>` : ''}
                 ${length ? `<span class="px-2 py-1 rounded bg-m3-surfaceContainerLow border border-m3-outlineVariant/30"><i class="fa-regular fa-clock"></i> ${length}</span>` : ''}
-                <span class="px-2 py-1 rounded bg-amber-500/10 text-amber-400 font-bold border border-amber-500/20">★ ${rating}</span>
+                <span class="px-2 py-1 rounded bg-amber-500/10 text-amber-300 font-bold border border-amber-500/20">★ ${rating}</span>
             `;
 
             document.getElementById('meta-bg-blur').style.backgroundImage = `url('https://st.kp.yandex.net/images/film_big/${kpId}.jpg')`;
@@ -587,16 +716,14 @@ function togglePlayerSelectMenu() {
     const dropdown = document.getElementById('player-selector-dropdown');
     const arrow = document.getElementById('player-selector-arrow');
     
-    if (dropdown) {
-        if (dropdown.classList.contains('hidden')) {
-            dropdown.classList.remove('hidden');
-            dropdown.classList.add('flex');
-            if (arrow) arrow.style.transform = 'rotate(180deg)';
-        } else {
-            dropdown.classList.add('hidden');
-            dropdown.classList.remove('flex');
-            if (arrow) arrow.style.transform = 'rotate(0deg)';
-        }
+    if (dropdown.classList.contains('hidden')) {
+        dropdown.classList.remove('hidden');
+        dropdown.classList.add('flex');
+        if (arrow) arrow.style.transform = 'rotate(180deg)';
+    } else {
+        dropdown.classList.add('hidden');
+        dropdown.classList.remove('flex');
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
     }
 }
 
@@ -610,12 +737,11 @@ function setPlayerMode(mode) {
     if (arrow) arrow.style.transform = 'rotate(0deg)';
 
     const namesMap = {
-        'external_villybizy': 'SSpoisk',
+        'external_sspoisk': 'SSpoisk',
         'external_kinobox': 'Kinobox',
         'external_gokino' : 'Gokino'
     };
-    const badge = document.getElementById('active-player-name-badge');
-    if (badge) badge.innerText = namesMap[mode] || 'Плеер';
+    document.getElementById('active-player-name-badge').innerText = namesMap[mode] || 'Плеер';
 
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('bg-m3-primaryContainer', 'text-m3-onPrimaryContainer');
@@ -634,17 +760,13 @@ function setPlayerMode(mode) {
 
     if (mode === 'external_kinobox') {
         iframeSrc = `https://on.kinohub.vip/movie/${activeMovieId}`; 
-    } else if (mode === 'external_villybizy') {
+    } else if (mode === 'external_sspoisk') {
         const isSeries = ['TV_SERIES', 'MINI_SERIES', 'TV_SHOW'].includes(activeMovieType);
         const route = isSeries ? 'series' : 'film';
         iframeSrc = `https://bulkikim.sbs/${route}/${activeMovieId}/`;
     } else if (mode === 'external_gokino') {
-        iframeSrc = `https://matrix.gokino.by/search.php?q=${activeMovieId}`; 
+        iframeSrc = `https://matrix.gokino.by/search.php?q=${activeMovieId}`;
     }
-
-    if (window.playerStallTimer) clearTimeout(window.playerStallTimer);
-    const stallHint = document.getElementById('player-stall-hint');
-    if (stallHint) stallHint.classList.add('hidden');
 
     if (wrapper) {
         wrapper.innerHTML = `
@@ -656,14 +778,5 @@ function setPlayerMode(mode) {
                     class="w-full h-full border-0 absolute inset-0 z-10 bg-black">
             </iframe>
         `;
-
-        let iframeLoaded = false;
-        const iframeEl = document.getElementById('active-player-iframe');
-        if (iframeEl) {
-            iframeEl.onload = () => { iframeLoaded = true; };
-        }
-        window.playerStallTimer = setTimeout(() => {
-            if (!iframeLoaded && stallHint) stallHint.classList.remove('hidden');
-        }, 8000);
     }
 }
