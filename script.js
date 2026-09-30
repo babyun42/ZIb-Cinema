@@ -173,7 +173,7 @@ function applyTheme(mode, colorHex) {
 })();
 
 // Application Logic
-const KP_API_KEY = '8c8e1a50-6322-4135-8875-5d40a5420d86'; 
+const KP_API_KEY = '8c8e1a50-6322-4135-8875-5d40a5420d86';
 const API_HEADERS = { 'X-API-KEY': KP_API_KEY, 'Content-Type': 'application/json' };
 
 const fallbackPoster = 'https://placehold.co/400x600/181614/e2dcd6?text=Постер+не+найден';
@@ -229,10 +229,10 @@ function updateSettingsUIActiveStates() {
 
 window.onload = function() {
     switchNavTab('home');
-    loadHomeData(); 
-    renderHistory(); 
+    loadHomeData();
+    renderHistory();
     updateSettingsUIActiveStates();
-    
+
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.group')) {
             document.getElementById('search-suggestions').classList.add('hidden');
@@ -249,13 +249,13 @@ function createMovieCard(movie, isSlider = false) {
     const rating = movie.ratingKinopoisk || movie.ratingImdb || movie.rating || '—';
     const year = movie.year || 'Н/Д';
     const name = movie.nameRu || movie.nameOriginal || movie.nameEn || 'Без названия';
-    
+
     const widthClass = isSlider ? 'w-36 sm:w-44 shrink-0 snap-start' : 'w-full';
-    
+
     return `
-    <div onclick="openMoviePlayer('${mId}')" class="${widthClass} group relative bg-m3-surfaceContainer p-2 sm:p-3 rounded-3xl border border-m3-outlineVariant/20 hover:border-m3-outlineVariant/50 hover:shadow-2xl transition-all duration-300 cursor-pointer shadow-lg flex flex-col justify-between h-full">
+    <div onclick="openMoviePlayer('${mId}')" class="${widthClass} group relative bg-m3-surfaceContainer p-2 sm:p-3 rounded-3xl border border-m3-outlineVariant/20 hover:border-m3-outlineVariant/50 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col justify-between h-full">
         <div class="relative aspect-[2/3] rounded-2xl overflow-hidden mb-3 bg-m3-surfaceContainerLowest">
-            <img src="https://st.kp.yandex.net/images/film_big/${mId}.jpg" alt="${name}" 
+            <img src="https://st.kp.yandex.net/images/film_big/${mId}.jpg" alt="${name}"
                  referrerpolicy="no-referrer"
                  onerror="this.onerror=null; this.src='${fallbackPoster}';"
                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
@@ -373,7 +373,7 @@ async function loadHomeData() {
         const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.2/films/collections?type=TOP_POPULAR_ALL&page=1`, { headers: API_HEADERS });
         if (!res.ok) throw new Error('API Error');
         const data = await res.json();
-        
+
         if (data.items && data.items.length > 0) {
             slider.innerHTML = data.items.slice(0, 15).map(movie => createMovieCard(movie, true)).join('');
         }
@@ -382,9 +382,9 @@ async function loadHomeData() {
     }
 }
 
-let popularNextPage = 1;      
-let popularTotalPages = null; 
-let popularLoadedCount = 0;   
+let popularNextPage = 1;
+let popularTotalPages = null;
+let popularLoadedCount = 0;
 let popularLoadingMore = false;
 
 async function fetchPopularBatch(startPage, pagesCount) {
@@ -505,15 +505,15 @@ function renderHistory() {
 
 function addToHistory(movieData) {
     if (!movieData.kinopoiskId && !movieData.filmId) return;
-    
+
     let history = JSON.parse(localStorage.getItem('zibHistory') || '[]');
     const mId = movieData.kinopoiskId || movieData.filmId;
-    
+
     history = history.filter(m => (m.kinopoiskId || m.filmId) != mId);
     history.unshift(movieData);
-    
+
     if (history.length > 20) history.pop();
-    
+
     localStorage.setItem('zibHistory', JSON.stringify(history));
     renderHistory();
 }
@@ -526,7 +526,7 @@ function clearHistory() {
 function scrollSlider(sliderId, direction) {
     const slider = document.getElementById(sliderId);
     if (slider) {
-        const scrollAmount = slider.clientWidth * 0.70; 
+        const scrollAmount = slider.clientWidth * 0.70;
         slider.scrollBy({ left: scrollAmount * direction, behavior: 'smooth' });
     }
 }
@@ -542,7 +542,7 @@ function handleLiveSearch(query) {
     }
 
     icon.className = 'fa-solid fa-spinner fa-spin';
-    
+
     clearTimeout(searchDebounceTimer);
     searchDebounceTimer = setTimeout(async () => {
         try {
@@ -569,7 +569,7 @@ function handleLiveSearch(query) {
                     const name = film.nameRu || film.nameEn || 'Неизвестно';
                     const year = film.year || '';
                     const rating = film.rating ? `<span class="text-amber-300 font-bold px-1 rounded bg-amber-400/10">★ ${film.rating}</span>` : '';
-                    
+
                     return `
                         <button onclick="openMoviePlayer('${film.filmId}')" class="w-full text-left p-2 hover:bg-m3-surfaceContainerHighest transition-colors flex items-center gap-3 rounded-xl animate-fade-in-down cursor-pointer" style="animation-delay: ${index * 50}ms">
                             <img src="${film.posterUrlPreview || film.posterUrl}" class="w-10 h-14 object-cover rounded bg-m3-surfaceContainerLowest" referrerpolicy="no-referrer" onerror="this.src='${fallbackPoster}'">
@@ -597,7 +597,7 @@ function handleLiveSearch(query) {
 async function executeDirectSearch() {
     const query = document.getElementById('search-input').value.trim();
     document.getElementById('search-suggestions').classList.add('hidden');
-    
+
     if (!query) return;
 
     if (/^\d+$/.test(query)) {
@@ -654,7 +654,7 @@ async function openMoviePlayer(kpId) {
     if(searchView) hideMainView(searchView);
     if(genericView) hideMainView(genericView);
     showMainView(playerView, 'right');
-    
+
     document.getElementById('current-player-kp-id').innerText = kpId;
     document.getElementById('player-movie-title').innerText = 'Загрузка информации...';
     document.getElementById('player-movie-description').innerText = '';
@@ -663,7 +663,7 @@ async function openMoviePlayer(kpId) {
 
     activeMovieId = kpId;
     activeMovieType = 'FILM';
-    
+
     const wrapper = document.getElementById('player-wrapper');
     if (wrapper) {
         wrapper.innerHTML = `
@@ -678,19 +678,19 @@ async function openMoviePlayer(kpId) {
         const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.2/films/${kpId}`, { headers: API_HEADERS });
         if (res.ok) {
             const film = await res.json();
-            
+
             activeMovieType = film.type || 'FILM';
             setPlayerMode(currentMode);
-            
+
             const name = film.nameRu || film.nameOriginal || `Фильм #${kpId}`;
             const year = film.year || 'Н/Д';
             const rating = film.ratingKinopoisk || film.ratingImdb || '—';
             const length = film.filmLength ? `${film.filmLength} мин.` : '';
             const genres = film.genres ? film.genres.map(g => g.genre).slice(0, 3).join(', ') : '';
-            
+
             document.getElementById('player-movie-title').innerText = name;
             document.getElementById('player-movie-description').innerText = film.description || film.shortDescription || 'Описание отсутствует.';
-            
+
             document.getElementById('player-movie-meta').innerHTML = `
                 <span class="px-2 py-1 rounded bg-m3-surfaceContainerLow border border-m3-outlineVariant/30">${year}</span>
                 ${genres ? `<span class="px-2 py-1 rounded bg-m3-surfaceContainerLow border border-m3-outlineVariant/30">${genres}</span>` : ''}
@@ -706,7 +706,7 @@ async function openMoviePlayer(kpId) {
         console.error("Failed to load details:", err);
         document.getElementById('player-movie-title').innerText = `Просмотр (ID: ${kpId})`;
         document.getElementById('player-movie-meta').innerHTML = '<span class="text-red-400 text-xs">Данные не загружены</span>';
-        
+
         setPlayerMode(currentMode);
         addToHistory({ kinopoiskId: kpId, nameRu: `Фильм #${kpId}` });
     }
@@ -715,7 +715,7 @@ async function openMoviePlayer(kpId) {
 function togglePlayerSelectMenu() {
     const dropdown = document.getElementById('player-selector-dropdown');
     const arrow = document.getElementById('player-selector-arrow');
-    
+
     if (dropdown.classList.contains('hidden')) {
         dropdown.classList.remove('hidden');
         dropdown.classList.add('flex');
@@ -759,7 +759,7 @@ function setPlayerMode(mode) {
     let iframeSrc = '';
 
     if (mode === 'external_kinobox') {
-        iframeSrc = `https://on.kinohub.vip/movie/${activeMovieId}`; 
+        iframeSrc = `https://on.kinohub.vip/movie/${activeMovieId}`;
     } else if (mode === 'external_sspoisk') {
         const isSeries = ['TV_SERIES', 'MINI_SERIES', 'TV_SHOW'].includes(activeMovieType);
         const route = isSeries ? 'series' : 'film';
@@ -770,9 +770,9 @@ function setPlayerMode(mode) {
 
     if (wrapper) {
         wrapper.innerHTML = `
-            <iframe src="${iframeSrc}" 
+            <iframe src="${iframeSrc}"
                     id="active-player-iframe"
-                    allowfullscreen 
+                    allowfullscreen
                     allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
                     referrerpolicy="origin"
                     class="w-full h-full border-0 absolute inset-0 z-10 bg-black">
