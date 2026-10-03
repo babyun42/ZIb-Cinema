@@ -105,15 +105,92 @@
             color: rgb(var(--m3-on-primary-container)) !important;
         }
 
+        /* ===== Анимации интерфейса ===== */
+        /* плавные переходы и «нажатие» для всех кнопок (кроме стрелок слайдера и сердечек, у них свои) */
+        button:not(.slider-arrow):not(.fav-btn) {
+            transition: color .2s ease, background-color .2s ease, border-color .2s ease, box-shadow .2s ease,
+                        opacity .2s ease, transform .2s ease, scale .15s ease !important;
+        }
+        button:not(:disabled):active { scale: .96; }
+        .slider-arrow:active { scale: .9; }
+
+        /* карточки фильмов: лёгкий подъём при наведении и «нажатие» */
+        @media (hover: hover) { [data-mid]:hover { transform: translateY(-3px); } }
+        [data-mid]:active { transform: scale(.98); }
+
+        @keyframes pfIn { from { opacity: 0; transform: translateY(12px) scale(.985); } to { opacity: 1; transform: none; } }
+        .pf-enter { animation: pfIn .4s cubic-bezier(.2,.8,.2,1) both; }
+
+        @keyframes favPop { 0% { transform: scale(1); } 40% { transform: scale(1.45); } 100% { transform: scale(1); } }
+        .fav-pop { display: inline-block; animation: favPop .4s ease; }
+
+        /* переключатель «Создать аккаунт / Войти» */
+        .pf-seg-pill { transition: transform .38s cubic-bezier(.4, 0, .2, 1); }
+        #profile-guest[data-mode="login"] .pf-seg-pill { transform: translateX(100%); }
+        .pf-seg-btn { color: rgb(var(--m3-secondary)); font-weight: 500; }
+        #profile-guest[data-mode="create"] .pf-seg-create,
+        #profile-guest[data-mode="login"] .pf-seg-login { color: rgb(var(--m3-on-primary-container)); font-weight: 700; }
+        .pf-panel { grid-area: 1 / 1; transition: opacity .3s ease, transform .38s cubic-bezier(.4, 0, .2, 1), visibility .3s; }
+        #profile-guest[data-mode="create"] .pf-panel-login { opacity: 0; visibility: hidden; pointer-events: none; transform: translateX(28px); }
+        #profile-guest[data-mode="login"] .pf-panel-create { opacity: 0; visibility: hidden; pointer-events: none; transform: translateX(-28px); }
+
+        .pf-leave { opacity: 0; transform: translateX(28px); max-height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; margin: 0 !important; overflow: hidden; border-width: 0 !important; transition: all .3s ease; }
+
+        /* ===== Подсветка вкладок шапки при наведении (Material 3 state layer) ===== */
+        .nav-tab-btn { position: relative; }
+        .nav-tab-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 9999px;
+            background: currentColor;
+            opacity: 0;
+            transition: opacity .2s ease;
+            pointer-events: none;
+        }
+        .nav-tab-btn:hover::before { opacity: .09; }
+        .nav-tab-btn:active::before { opacity: .14; }
+        .nav-tab-btn.is-active-tab:hover { color: rgb(var(--m3-on-primary-container)); }
+        .nav-tab-btn:not(.is-active-tab):hover { color: rgb(var(--m3-on-surface)); }
+
+        /* ===== Избранное: сердечко на карточке ===== */
+        .fav-btn { opacity: 0; transition: opacity .2s ease, transform .15s ease; }
+        .group:hover .fav-btn, .fav-btn.is-fav, .fav-btn:focus-visible { opacity: 1; }
+        .fav-btn:active { transform: scale(.85); }
+        @media (hover: none) { .fav-btn { opacity: 1; } }
+
+        /* ===== Оптимизация длинных сеток (Популярное / Поиск) ===== */
+        /* Браузер не рисует и не считает вёрстку карточек, которых сейчас не видно на экране */
+        .grid-card {
+            content-visibility: auto;
+            contain-intrinsic-block-size: auto 340px; /* примерная высота до первого показа, потом запоминается реальная */
+        }
+        /* Огромный список не двигаем transform'ом (это создаёт гигантский слой) — только плавное появление */
+        #popular-view.view-anim, #search-view.view-anim { transition-property: opacity; }
+        #popular-view.view-anim.view-enter-right, #popular-view.view-anim.view-enter-left,
+        #search-view.view-anim.view-enter-right, #search-view.view-anim.view-enter-left { transform: none; }
+
         /* ===== Плавное затухание обложек по краям слайдера ===== */
-        @property --fade-l { syntax: '<length>'; inherits: false; initial-value: 0px; }
-        @property --fade-r { syntax: '<length>'; inherits: false; initial-value: 0px; }
-        .fade-slider {
-            --fade-l: 0px;
-            --fade-r: 0px;
-            -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent 100%);
-            mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent 100%);
-            transition: --fade-l .3s ease, --fade-r .3s ease;
+        /* Раньше затухание делалось маской на самом слайдере — вместе с hover-эффектами и размытием оно
+           мигало. Теперь это обычные градиенты поверх краёв, только с анимацией opacity. */
+        .slider-fade {
+            position: absolute;
+            top: 0;      /* точные top и height выставляет JS (updateSliderFade) по реальным карточкам */
+            height: 100%;
+            width: 4rem;
+            z-index: 5;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity .25s ease;
+        }
+        .slider-fade.is-on { opacity: 1; }
+        .slider-fade-l {
+            left: -2rem;
+            background: linear-gradient(to right, rgb(var(--m3-surface)) 0%, rgb(var(--m3-surface) / .65) 45%, rgb(var(--m3-surface) / 0) 100%);
+        }
+        .slider-fade-r {
+            right: -2rem;
+            background: linear-gradient(to left, rgb(var(--m3-surface)) 0%, rgb(var(--m3-surface) / .65) 45%, rgb(var(--m3-surface) / 0) 100%);
         }
 
         /* ===== Кнопки перемотки: полупрозрачные, проявляются при приближении мыши ===== */
@@ -369,6 +446,7 @@
                     <button onclick="switchNavTab('popular')" class="text-xs text-m3-primary hover:text-m3-onSurface transition-colors">Смотреть популяные<i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></button>
                 </div>
                 <div class="relative group/slider">
+                    <div class="slider-fade slider-fade-l"></div><div class="slider-fade slider-fade-r"></div>
                     <button onclick="scrollSlider('home-popular-slider', -1)" class="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 sm:w-10 sm:h-10 bg-black/80 hover:bg-m3-primary hover:text-m3-onPrimary rounded-full text-white slider-arrow hidden md:flex items-center justify-center backdrop-blur-md border border-white/10 shadow-lg cursor-pointer"><i class="fa-solid fa-chevron-left text-sm sm:text-base"></i></button>
 
                     <div class="fade-slider flex overflow-x-auto gap-4 p-8 -m-8 hide-scrollbar snap-x snap-mandatory scroll-smooth" id="home-popular-slider">
@@ -388,6 +466,7 @@
                     <button onclick="clearHistory()" class="text-[10px] text-m3-outline hover:text-red-400 transition-colors uppercase tracking-wider font-bold cursor-pointer">Очистить</button>
                 </div>
                 <div class="relative group/slider">
+                    <div class="slider-fade slider-fade-l"></div><div class="slider-fade slider-fade-r"></div>
                     <button onclick="scrollSlider('home-history-slider', -1)" class="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 sm:w-10 sm:h-10 bg-black/80 hover:bg-m3-primary hover:text-m3-onPrimary rounded-full text-white slider-arrow hidden md:flex items-center justify-center backdrop-blur-md border border-white/10 shadow-lg cursor-pointer"><i class="fa-solid fa-chevron-left text-sm sm:text-base"></i></button>
 
                     <div class="fade-slider flex overflow-x-auto gap-4 p-8 -m-8 hide-scrollbar snap-x snap-mandatory scroll-smooth" id="home-history-slider">
@@ -440,6 +519,9 @@
                     <span class="hidden sm:inline-block text-xs text-m3-outline bg-m3-surfaceContainer px-3 py-1.5 rounded-full border border-m3-outlineVariant/20">
                         ID: <strong class="text-m3-primary font-mono" id="current-player-kp-id">...</strong>
                     </span>
+                    <button onclick="toggleFavorite(activeMovieId)" id="player-fav-btn" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-m3-surfaceContainerHigh hover:bg-m3-surfaceContainerHighest text-m3-onSurface border border-m3-outlineVariant/40 transition-colors text-xs font-medium cursor-pointer">
+                        <i class="fa-regular fa-heart"></i><span class="hidden sm:inline">В избранное</span>
+                    </button>
                 </div>
 
                 <!-- Player Selector Drawer Menu -->
@@ -496,6 +578,32 @@
                     </p>
                 </div>
             </div>
+        </section>
+
+        <!-- VIEW: COLLECTIONS (Подборки) -->
+        <section id="collections-view" class="view-anim transition-all duration-300 ease-out hidden space-y-6">
+            <div>
+                <h2 class="text-2xl font-bold text-m3-onSurface flex items-center gap-2">
+                    <i class="fa-solid fa-layer-group text-m3-primary"></i> Подборки
+                </h2>
+                <p class="text-xs text-m3-outline mt-1">Ваши коллекции фильмов</p>
+            </div>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-m3-onSurface flex items-center gap-2">
+                        <span class="w-9 h-9 rounded-2xl bg-m3-primaryContainer text-m3-onPrimaryContainer flex items-center justify-center shadow-sm">
+                            <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                        </span> Избранное
+                    </h3>
+                    <span class="text-xs text-m3-outline bg-m3-surfaceContainer px-3 py-1 rounded-full border border-m3-outlineVariant/30" id="favorites-count">0</span>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-5" id="favorites-grid"></div>
+            </div>
+        </section>
+
+        <!-- VIEW: PROFILE (Профиль) -->
+        <section id="profile-view" class="view-anim transition-all duration-300 ease-out hidden">
+            <div id="profile-content" class="max-w-xl mx-auto"></div>
         </section>
 
         <!-- VIEW 3: GENERIC VIEW -->
@@ -648,6 +756,7 @@
             initSliderArrows();
             loadHomeData();
             renderHistory();
+            initAuth();
             updateSettingsUIActiveStates();
 
             document.addEventListener('click', function(e) {
@@ -664,15 +773,23 @@
 
         // ===== Затухание краёв слайдеров =====
         function updateSliderFade(el) {
-            const FADE = '64px';
             const first = el.firstElementChild, last = el.lastElementChild;
-            if (!first || !last) return;
+            const wrap = el.parentElement;
+            const fl = wrap && wrap.querySelector('.slider-fade-l');
+            const fr = wrap && wrap.querySelector('.slider-fade-r');
+            if (!first || !last || !fl || !fr) return;
+
+            // Полосы строго по высоте карточек. (Отрицательные отступы слайдера «схлопываются» с контейнером,
+            // поэтому высоту контейнера использовать нельзя — полосы заезжали бы на заголовки.)
+            [fl, fr].forEach(o => {
+                o.style.top = first.offsetTop + 'px';
+                o.style.height = first.offsetHeight + 'px';
+            });
+
             const box = el.getBoundingClientRect();
             // Затухание нужно только если крайняя карточка реально обрезана краем слайдера
-            const cutLeft  = first.getBoundingClientRect().left  < box.left  - 2;
-            const cutRight = last.getBoundingClientRect().right > box.right + 2;
-            el.style.setProperty('--fade-l', cutLeft  ? FADE : '0px');
-            el.style.setProperty('--fade-r', cutRight ? FADE : '0px');
+            fl.classList.toggle('is-on', first.getBoundingClientRect().left < box.left - 2);
+            fr.classList.toggle('is-on', last.getBoundingClientRect().right > box.right + 2);
         }
 
         function initSliderFades() {
@@ -685,6 +802,10 @@
             window.addEventListener('resize', () => {
                 document.querySelectorAll('.fade-slider').forEach(updateSliderFade);
             });
+            // после загрузки шрифтов высота карточек может измениться
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(() => document.querySelectorAll('.fade-slider').forEach(updateSliderFade));
+            }
         }
 
         // ===== Кнопки перемотки проявляются при приближении курсора =====
@@ -716,18 +837,21 @@
             const mId = movie.kinopoiskId || movie.filmId;
             const rating = movie.ratingKinopoisk || movie.ratingImdb || movie.rating || '—';
             const year = movie.year || 'Н/Д';
-            const name = movie.nameRu || movie.nameOriginal || movie.nameEn || 'Без названия';
+            const name = esc(movie.nameRu || movie.nameOriginal || movie.nameEn || 'Без названия');
+            const isFav = favIds.has(String(mId));
+            const slim = slimMovie(movie);
+            if (slim) movieRegistry.set(String(mId), slim);
 
             const widthClass = isSlider ? 'w-36 sm:w-44 shrink-0 snap-start' : 'w-full';
 
             return `
-            <div onclick="openMoviePlayer('${mId}')" class="${widthClass} group relative bg-m3-surfaceContainer p-2 sm:p-3 rounded-3xl border border-m3-outlineVariant/20 hover:border-m3-outlineVariant/50 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col justify-between h-full">
+            <div onclick="openMoviePlayer('${mId}')" data-mid="${mId}" class="${isSlider ? '' : 'grid-card '}${widthClass} group relative bg-m3-surfaceContainer p-2 sm:p-3 rounded-3xl border border-m3-outlineVariant/20 hover:border-m3-outlineVariant/50 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col justify-between h-full">
                 <div class="relative aspect-[2/3] rounded-2xl overflow-hidden mb-3 bg-m3-surfaceContainerLowest">
                     <img src="https://st.kp.yandex.net/images/film_big/${mId}.jpg" alt="${name}"
-                         referrerpolicy="no-referrer"
+                         referrerpolicy="no-referrer" loading="lazy" decoding="async"
                          onerror="this.onerror=null; this.src='${fallbackPoster}';"
                          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                    <div class="absolute top-2 right-2 bg-black/80 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] font-bold text-amber-300 border border-white/10 shadow">
+                    <div class="absolute top-2 right-2 bg-black/80 px-2 py-0.5 rounded-md text-[10px] font-bold text-amber-300 border border-white/10 shadow">
                         ★ ${rating}
                     </div>
                     <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -735,6 +859,9 @@
                             <i class="fa-solid fa-play ml-0.5"></i>
                         </div>
                     </div>
+                    <button type="button" data-fav="${mId}" aria-label="Избранное" onclick="event.stopPropagation(); toggleFavorite('${mId}')" class="fav-btn ${isFav ? 'is-fav' : ''} absolute top-2 left-2 z-10 w-7 h-7 rounded-full bg-black/70 border border-white/10 flex items-center justify-center text-xs cursor-pointer">
+                        <i class="${isFav ? 'fa-solid text-rose-400' : 'fa-regular text-white'} fa-heart"></i>
+                    </button>
                 </div>
                 <div class="flex-grow flex flex-col justify-end">
                     <h3 class="font-bold text-xs sm:text-sm text-m3-onSurface line-clamp-2 group-hover:text-m3-primary transition-colors leading-tight">${name}</h3>
@@ -855,7 +982,11 @@
             const playerView = document.getElementById('player-view');
             const genericView = document.getElementById('generic-view');
             const settingsView = document.getElementById('settings-view');
+            const profileView = document.getElementById('profile-view');
+            const collectionsView = document.getElementById('collections-view');
 
+            hideMainView(profileView);
+            hideMainView(collectionsView);
             if(homeView) hideMainView(homeView);
             if(popularView) hideMainView(popularView);
             if(searchView) hideMainView(searchView);
@@ -872,6 +1003,13 @@
                 if(searchView) showMainView(searchView, direction);
             } else if (tabName === 'settings') {
                 showMainView(settingsView, direction);
+            } else if (tabName === 'profile') {
+                showMainView(profileView, direction);
+                renderProfileView();
+                if (authUser && !freshToken) loadSessions();
+            } else if (tabName === 'collections') {
+                showMainView(collectionsView, direction);
+                renderCollections();
             } else {
                 showMainView(genericView, direction);
                 document.getElementById('generic-title').innerText = tabName === 'collections' ? 'Подборки' : 'Профиль';
@@ -879,9 +1017,59 @@
             }
         }
 
+        // ===== Запоминаем место в списке, откуда открыли фильм =====
+        let savedListState = null;
+
+        function visibleCardById(mid) {
+            return [...document.querySelectorAll('[data-mid="' + mid + '"]')].find(e => e.offsetParent !== null) || null;
+        }
+
+        function saveListState(kpId) {
+            const playerView = document.getElementById('player-view');
+            if (playerView && !playerView.classList.contains('hidden')) return; // уже в плеере — не затираем
+
+            const card = visibleCardById(kpId);
+            const sliders = {};
+            document.querySelectorAll('.fade-slider').forEach(el => { sliders[el.id] = el.scrollLeft; });
+
+            savedListState = {
+                tab: currentActiveTab,
+                mid: String(kpId),
+                y: window.scrollY,
+                offset: card ? card.getBoundingClientRect().top : null,
+                sliders
+            };
+        }
+
+        function restoreListState() {
+            const st = savedListState;
+            if (!st || st.tab !== currentActiveTab) return;
+            savedListState = null;
+
+            // горизонтальные слайдеры на главной
+            Object.keys(st.sliders).forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.style.scrollBehavior = 'auto';
+                el.scrollLeft = st.sliders[id];
+                requestAnimationFrame(() => { el.style.scrollBehavior = ''; });
+            });
+
+            // вертикальная позиция: ставим именно ту карточку на то же место экрана
+            const apply = () => {
+                let top = st.y;
+                const card = visibleCardById(st.mid);
+                if (card && st.offset !== null) top = card.getBoundingClientRect().top + window.scrollY - st.offset;
+                window.scrollTo({ top, behavior: 'instant' });
+            };
+            apply();
+            requestAnimationFrame(apply); // поправка, когда браузер досчитает размеры карточек
+        }
+
         function showCatalogView() {
             stopPlayer();
             switchNavTab(currentActiveTab);
+            restoreListState();
         }
 
         async function loadHomeData() {
@@ -899,29 +1087,96 @@
             }
         }
 
+        // ===== Лента «Популярное» =====
+        // Сначала берём основную подборку Кинопоиска (TOP_POPULAR_ALL). У API она ограничена
+        // по числу страниц, поэтому когда она заканчивается, лента продолжается
+        // по годам (от нового к старому), внутри каждого года — по убыванию популярности.
+        // Повторы отсеиваются, так что слотов можно открыть сколько угодно.
+        const POPULAR_FIRST_YEAR = new Date().getFullYear();
+        const POPULAR_LAST_YEAR = 1960;
+        const POPULAR_SOURCES = [{ kind: 'collection' }];
+        for (let y = POPULAR_FIRST_YEAR; y >= POPULAR_LAST_YEAR; y--) POPULAR_SOURCES.push({ kind: 'year', year: y });
+
+        let popularSrc = 0;
         let popularNextPage = 1;
         let popularTotalPages = null;
         let popularLoadedCount = 0;
         let popularLoadingMore = false;
+        let popularInitLoading = false;
+        let popularSeen = new Set();
 
-        async function fetchPopularBatch(startPage, pagesCount) {
-            const promises = [];
-            for (let i = startPage; i < startPage + pagesCount; i++) {
-                promises.push(
-                    fetch(`https://kinopoiskapiunofficial.tech/api/v2.2/films/collections?type=TOP_POPULAR_ALL&page=${i}`, { headers: API_HEADERS })
-                    .then(res => res.json())
-                );
+        function resetPopularState() {
+            popularSrc = 0;
+            popularNextPage = 1;
+            popularTotalPages = null;
+            popularLoadedCount = 0;
+            popularSeen = new Set();
+        }
+
+        function popularExhausted() {
+            return popularSrc >= POPULAR_SOURCES.length;
+        }
+
+        function advancePopularSource() {
+            popularSrc++;
+            popularNextPage = 1;
+            popularTotalPages = null;
+        }
+
+        function popularPageUrl(src, page) {
+            const base = 'https://kinopoiskapiunofficial.tech/api/v2.2/films';
+            if (src.kind === 'collection') return `${base}/collections?type=TOP_POPULAR_ALL&page=${page}`;
+            return `${base}?order=NUM_VOTE&type=ALL&yearFrom=${src.year}&yearTo=${src.year}&page=${page}`;
+        }
+
+        // Собирает минимум minItems новых (не повторяющихся) фильмов
+        async function fetchPopularBatch(minItems = 100) {
+            const out = [];
+
+            while (out.length < minItems && !popularExhausted()) {
+                const src = POPULAR_SOURCES[popularSrc];
+
+                // Пока не знаем число страниц источника — берём одну, дальше пачками по 5
+                let pagesToFetch = 1;
+                if (popularTotalPages !== null) {
+                    pagesToFetch = Math.min(5, popularTotalPages - popularNextPage + 1);
+                    if (pagesToFetch <= 0) { advancePopularSource(); continue; }
+                }
+
+                let failed = 0;
+                const promises = [];
+                for (let i = popularNextPage; i < popularNextPage + pagesToFetch; i++) {
+                    promises.push(
+                        fetch(popularPageUrl(src, i), { headers: API_HEADERS })
+                            .then(res => res.json())
+                            .catch(() => { failed++; return { items: [] }; })
+                    );
+                }
+
+                const results = await Promise.all(promises);
+                if (failed === pagesToFetch) throw new Error('network');
+
+                let gotAny = false;
+                results.forEach(data => {
+                    if (typeof data.totalPages === 'number') popularTotalPages = data.totalPages;
+                    (data.items || []).forEach(movie => {
+                        const id = movie.kinopoiskId || movie.filmId;
+                        if (!id || popularSeen.has(id)) return;
+                        popularSeen.add(id);
+                        out.push(movie);
+                        gotAny = true;
+                    });
+                });
+
+                popularNextPage += pagesToFetch;
+
+                // источник закончился (или вернул пустоту) — переходим к следующему
+                if (popularTotalPages === null || popularNextPage > popularTotalPages || (!gotAny && results.every(d => !(d.items && d.items.length)))) {
+                    advancePopularSource();
+                }
             }
 
-            const results = await Promise.all(promises);
-            let items = [];
-
-            results.forEach(data => {
-                if (data.items) items = items.concat(data.items);
-                if (typeof data.totalPages === 'number') popularTotalPages = data.totalPages;
-            });
-
-            return items;
+            return out;
         }
 
         function updatePopularCountLabel() {
@@ -936,7 +1191,7 @@
 
         function renderLoadMoreButton() {
             removeLoadMoreButton();
-            if (popularTotalPages && popularNextPage > popularTotalPages) return;
+            if (popularExhausted()) return;
 
             const grid = document.getElementById('movies-grid-container');
             const wrap = document.createElement('div');
@@ -951,20 +1206,18 @@
         async function loadPopularTop100() {
             const grid = document.getElementById('movies-grid-container');
 
-            if(grid.children.length > 0 && !grid.innerHTML.includes('spinner')) return;
+            if (popularLoadedCount > 0 || popularInitLoading) return;
+            popularInitLoading = true;
 
-            popularNextPage = 1;
-            popularTotalPages = null;
-            popularLoadedCount = 0;
+            resetPopularState();
 
-            grid.innerHTML = `<div class="col-span-full text-center py-10"><i class="fa-solid fa-spinner fa-spin text-m3-primary text-2xl"></i><span class="ml-3 text-m3-outline text-sm block mt-2">Сбор ТОП-100...</span></div>`;
+            grid.innerHTML = `<div class="col-span-full text-center py-10"><i class="fa-solid fa-spinner fa-spin text-m3-primary text-2xl"></i><span class="ml-3 text-m3-outline text-sm block mt-2">Сбор данных...</span></div>`;
 
             try {
-                const items = await fetchPopularBatch(popularNextPage, 5);
+                const items = await fetchPopularBatch(100);
 
                 if (items.length > 0) {
                     grid.innerHTML = items.map(movie => createMovieCard(movie, false)).join('');
-                    popularNextPage += 5;
                     popularLoadedCount = items.length;
                     updatePopularCountLabel();
                     renderLoadMoreButton();
@@ -973,12 +1226,14 @@
                 }
             } catch (err) {
                 grid.innerHTML = `<div class="col-span-full text-center py-10 text-m3-outline text-sm">Ошибка сети.</div>`;
+            } finally {
+                popularInitLoading = false;
             }
         }
 
         async function loadMorePopular() {
             if (popularLoadingMore) return;
-            if (popularTotalPages && popularNextPage > popularTotalPages) { removeLoadMoreButton(); return; }
+            if (popularExhausted()) { removeLoadMoreButton(); return; }
 
             popularLoadingMore = true;
             const btn = document.getElementById('popular-load-more-btn');
@@ -988,15 +1243,13 @@
             }
 
             try {
-                const pagesToFetch = popularTotalPages ? Math.min(5, popularTotalPages - popularNextPage + 1) : 5;
-                const items = await fetchPopularBatch(popularNextPage, pagesToFetch);
+                const items = await fetchPopularBatch(100);
                 const grid = document.getElementById('movies-grid-container');
 
                 removeLoadMoreButton();
 
                 if (items.length > 0) {
                     grid.insertAdjacentHTML('beforeend', items.map(movie => createMovieCard(movie, false)).join(''));
-                    popularNextPage += pagesToFetch;
                     popularLoadedCount += items.length;
                 }
 
@@ -1009,35 +1262,621 @@
             }
         }
 
+        // ================= ПРОФИЛИ, ИСТОРИЯ, ИЗБРАННОЕ =================
+        // Адрес бэкенда. Если сайт открыт файлом (file://) — берём localhost:3000.
+        // Свой адрес можно задать так: localStorage.setItem('zib_api_base', 'https://my-server.com')
+        const ZIB_API = (() => {
+            const custom = localStorage.getItem('zib_api_base');
+            if (custom) return custom.replace(/\/$/, '');
+            return location.protocol === 'file:' ? 'http://localhost:3000' : '';
+        })();
+
+        const HISTORY_LIMIT = 20;
+        const movieRegistry = new Map();   // id -> краткие данные фильма (для избранного)
+        localStorage.removeItem('zibToken'); // старый формат (до сеансов)
+        let authToken = localStorage.getItem('zibSession') || null; // ключ текущего сеанса
+        let sessionsList = [];
+        let sessionsCanManage = false;
+        let sessionsState = 'idle'; // idle | loading | error
+        let authUser = null;
+        let authHistory = [];
+        let favorites = [];
+        let favIds = new Set();
+        let profileMode = 'create';
+        let profileError = '';
+        let profileBusy = false;
+        let freshToken = null;
+
+        const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        function slimMovie(m) {
+            const id = Number(m && (m.kinopoiskId || m.filmId));
+            if (!Number.isInteger(id) || id <= 0) return null;
+            const out = { kinopoiskId: id };
+            ['nameRu', 'nameOriginal', 'nameEn'].forEach(k => { if (m[k]) out[k] = m[k]; });
+            if (m.year) out.year = m.year;
+            const r = m.ratingKinopoisk ?? m.rating;
+            if (r !== undefined && r !== null && r !== '' && !isNaN(Number(r))) out.ratingKinopoisk = Number(r);
+            return out;
+        }
+
+        async function apiFetch(path, { method = 'GET', body, token = authToken } = {}) {
+            let res;
+            try {
+                res = await fetch(ZIB_API + path, {
+                    method,
+                    headers: {
+                        ...(body ? { 'Content-Type': 'application/json' } : {}),
+                        ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+                    },
+                    body: body ? JSON.stringify(body) : undefined
+                });
+            } catch (e) {
+                throw Object.assign(new Error('Сервер профилей недоступен. Проверьте, что бэкенд запущен.'), { status: 0 });
+            }
+            let data = {};
+            try { data = await res.json(); } catch { /* пустой ответ */ }
+            if (res.status === 401 && token && token === authToken) { // сеанс завершён на другом устройстве
+                clearSession();
+                showToast('Сеанс завершён. Войдите снова.');
+            }
+            if (!res.ok) throw Object.assign(new Error(data.error || 'Ошибка сервера'), { status: res.status });
+            return data;
+        }
+
+        // ---------- уведомления ----------
+        let toastTimer = null;
+        function showToast(text, action) {
+            let el = document.getElementById('zib-toast');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'zib-toast';
+                el.className = 'fixed bottom-6 left-1/2 z-[100] max-w-[90vw] flex items-center gap-3 px-4 py-3 rounded-2xl bg-m3-surfaceContainerHighest text-m3-onSurface text-sm border border-m3-outlineVariant/40 shadow-2xl transition-all duration-300';
+                el.style.transform = 'translate(-50%, 16px)';
+                el.style.opacity = '0';
+                document.body.appendChild(el);
+            }
+            el.innerHTML = '<span>' + esc(text) + '</span>';
+            if (action) {
+                const b = document.createElement('button');
+                b.className = 'font-bold text-m3-primary whitespace-nowrap cursor-pointer';
+                b.textContent = action.label;
+                b.onclick = () => { el.style.opacity = '0'; el.style.transform = 'translate(-50%, 16px)'; action.fn(); };
+                el.appendChild(b);
+            }
+            void el.offsetWidth;
+            el.style.opacity = '1';
+            el.style.transform = 'translate(-50%, 0)';
+            el.style.pointerEvents = 'auto';
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translate(-50%, 16px)'; el.style.pointerEvents = 'none'; }, 4000);
+        }
+
+        // ---------- состояние аккаунта ----------
+        function saveAuthCache() {
+            if (!authUser) return;
+            try { localStorage.setItem('zibCache', JSON.stringify({ user: authUser, history: authHistory, favorites })); } catch { /* переполнено */ }
+        }
+
+        function applyAccount(d) {
+            authUser = d.user;
+            authHistory = d.history || [];
+            favorites = d.favorites || [];
+            favIds = new Set(favorites.map(m => String(m.kinopoiskId)));
+            favorites.forEach(m => movieRegistry.set(String(m.kinopoiskId), m));
+            saveAuthCache();
+            renderHistory();
+            refreshAllFavUI();
+            updatePlayerFavBtn();
+            if (currentActiveTab === 'profile') renderProfileView();
+            if (currentActiveTab === 'collections') renderCollections();
+        }
+
+        async function initAuth() {
+            if (!authToken) return;
+            try { // мгновенно показываем сохранённые данные, пока ждём сервер
+                const cache = JSON.parse(localStorage.getItem('zibCache') || 'null');
+                if (cache && cache.user) applyAccount(cache);
+            } catch { /* битый кэш */ }
+            try {
+                applyAccount(await apiFetch('/api/me'));
+            } catch (e) { /* 401 обработан в apiFetch, при отсутствии сети остаёмся на кэше */ }
+        }
+
+        function clearSession() {
+            authToken = null; authUser = null; authHistory = []; favorites = []; favIds = new Set();
+            freshToken = null; sessionsList = []; sessionsCanManage = false; tokenReveal = null;
+            localStorage.removeItem('zibSession');
+            localStorage.removeItem('zibCache');
+            renderHistory();
+            refreshAllFavUI();
+            updatePlayerFavBtn();
+            if (currentActiveTab === 'profile') renderProfileView();
+            if (currentActiveTab === 'collections') renderCollections();
+        }
+
+        // ---------- история просмотров ----------
+        function getHistory() {
+            return authUser ? authHistory : JSON.parse(localStorage.getItem('zibHistory') || '[]');
+        }
+
         function renderHistory() {
             const slider = document.getElementById('home-history-slider');
-            const history = JSON.parse(localStorage.getItem('zibHistory') || '[]');
+            const history = getHistory();
 
             if (history.length === 0) {
                 slider.innerHTML = `<div class="text-sm text-m3-outline py-6 px-4 bg-m3-surfaceContainerLow rounded-2xl w-full border border-m3-outlineVariant/20 border-dashed text-center">Вы еще ничего не смотрели. История пуста.</div>`;
             } else {
                 slider.innerHTML = history.map(movie => createMovieCard(movie, true)).join('');
             }
+            if (currentActiveTab === 'profile') renderProfileView();
         }
 
         function addToHistory(movieData) {
-            if (!movieData.kinopoiskId && !movieData.filmId) return;
+            const slim = slimMovie(movieData);
+            if (!slim) return;
+            movieRegistry.set(String(slim.kinopoiskId), slim);
 
-            let history = JSON.parse(localStorage.getItem('zibHistory') || '[]');
-            const mId = movieData.kinopoiskId || movieData.filmId;
+            const list = getHistory().filter(m => (m.kinopoiskId || m.filmId) != slim.kinopoiskId);
+            list.unshift(slim);
+            if (list.length > HISTORY_LIMIT) list.length = HISTORY_LIMIT;
 
-            history = history.filter(m => (m.kinopoiskId || m.filmId) != mId);
-            history.unshift(movieData);
-
-            if (history.length > 20) history.pop();
-
-            localStorage.setItem('zibHistory', JSON.stringify(history));
+            if (authUser) {
+                authHistory = list;
+                saveAuthCache();
+                apiFetch('/api/history', { method: 'POST', body: { movie: slim } })
+                    .catch(e => showToast('История не синхронизирована: ' + e.message));
+            } else {
+                localStorage.setItem('zibHistory', JSON.stringify(list));
+            }
             renderHistory();
         }
 
         function clearHistory() {
-            localStorage.removeItem('zibHistory');
+            if (authUser) {
+                authHistory = [];
+                saveAuthCache();
+                apiFetch('/api/history', { method: 'DELETE' }).catch(e => showToast('Не удалось очистить на сервере: ' + e.message));
+            } else {
+                localStorage.removeItem('zibHistory');
+            }
             renderHistory();
+        }
+
+        // ---------- избранное ----------
+        function setFavIcon(btn, isFav, animate = false) {
+            btn.classList.toggle('is-fav', isFav);
+            const i = btn.querySelector('i');
+            if (!i) return;
+            i.className = (isFav ? 'fa-solid text-rose-400' : 'fa-regular text-white') + ' fa-heart';
+            if (animate && isFav) { void i.offsetWidth; i.classList.add('fav-pop'); }
+        }
+
+        function updateFavUI(id) {
+            const isFav = favIds.has(String(id));
+            document.querySelectorAll('.fav-btn[data-fav="' + id + '"]').forEach(b => setFavIcon(b, isFav, true));
+            updatePlayerFavBtn(true);
+        }
+
+        function refreshAllFavUI() {
+            document.querySelectorAll('.fav-btn').forEach(b => setFavIcon(b, favIds.has(b.dataset.fav)));
+        }
+
+        function updatePlayerFavBtn(animate = false) {
+            const btn = document.getElementById('player-fav-btn');
+            if (!btn) return;
+            const isFav = activeMovieId && favIds.has(String(activeMovieId));
+            const icon = btn.querySelector('i');
+            icon.className = (isFav ? 'fa-solid text-rose-400' : 'fa-regular') + ' fa-heart';
+            if (animate && isFav) { void icon.offsetWidth; icon.classList.add('fav-pop'); }
+            btn.querySelector('span').textContent = isFav ? 'В избранном' : 'В избранное';
+        }
+
+        function toggleFavorite(id) {
+            id = String(id || '');
+            if (!/^\d+$/.test(id)) return;
+
+            if (!authUser) {
+                showToast('Войдите в профиль, чтобы сохранять избранное.', {
+                    label: 'Войти',
+                    fn: () => { stopPlayer(); switchNavTab('profile'); }
+                });
+                return;
+            }
+
+            const wasFav = favIds.has(id);
+            const snapshot = favorites.slice();
+
+            if (wasFav) {
+                favorites = favorites.filter(m => String(m.kinopoiskId) !== id);
+                favIds.delete(id);
+                removeFromFavoritesGrid(id);
+            } else {
+                const movie = movieRegistry.get(id) || { kinopoiskId: Number(id), nameRu: 'Фильм #' + id };
+                favorites.unshift(movie);
+                favIds.add(id);
+            }
+            updateFavUI(id);
+            saveAuthCache();
+            if (currentActiveTab === 'profile') renderProfileView();
+
+            const req = wasFav
+                ? apiFetch('/api/favorites/' + id, { method: 'DELETE' })
+                : apiFetch('/api/favorites', { method: 'POST', body: { movie: movieRegistry.get(id) || { kinopoiskId: Number(id), nameRu: 'Фильм #' + id } } });
+
+            req.catch(e => { // не вышло — откатываем
+                favorites = snapshot;
+                favIds = new Set(favorites.map(m => String(m.kinopoiskId)));
+                updateFavUI(id);
+                saveAuthCache();
+                if (currentActiveTab === 'collections') renderCollections();
+                showToast('Не удалось сохранить: ' + e.message);
+            });
+        }
+
+        // ---------- вкладка «Подборки» ----------
+        function removeFromFavoritesGrid(id) {
+            const grid = document.getElementById('favorites-grid');
+            if (!grid) return;
+            const card = grid.querySelector('[data-mid="' + id + '"]');
+            const finish = () => {
+                if (card) card.remove();
+                if (!grid.children.length) renderCollections();
+                else document.getElementById('favorites-count').textContent = favorites.length;
+            };
+            if (!card) return finish();
+            card.style.pointerEvents = 'none';
+            card.style.opacity = '0';
+            card.style.transform = 'scale(.9)';
+            setTimeout(finish, 280);
+        }
+
+        function renderCollections() {
+            const grid = document.getElementById('favorites-grid');
+            const count = document.getElementById('favorites-count');
+            if (!grid) return;
+
+            if (!authUser) {
+                count.textContent = '—';
+                grid.innerHTML = `<div class="col-span-full text-center py-12 px-6 bg-m3-surfaceContainerLow rounded-3xl border border-m3-outlineVariant/20 border-dashed space-y-3">
+                    <i class="fa-solid fa-user-lock text-3xl text-m3-outline"></i>
+                    <p class="text-sm text-m3-secondary">Войдите в профиль, чтобы сохранять избранное и видеть его здесь.</p>
+                    <button onclick="switchNavTab('profile')" class="px-5 py-2 rounded-full bg-m3-primary text-m3-onPrimary text-sm font-bold cursor-pointer">Открыть профиль</button>
+                </div>`;
+                return;
+            }
+            count.textContent = favorites.length;
+            if (!favorites.length) {
+                grid.innerHTML = `<div class="col-span-full text-center py-12 px-6 bg-m3-surfaceContainerLow rounded-3xl border border-m3-outlineVariant/20 border-dashed space-y-2">
+                    <i class="fa-regular fa-heart text-3xl text-m3-outline"></i>
+                    <p class="text-sm text-m3-secondary">Пока пусто. Нажмите на сердечко на карточке фильма, чтобы добавить его сюда.</p>
+                </div>`;
+                return;
+            }
+            grid.innerHTML = favorites.map(m => createMovieCard(m, false)).join('');
+        }
+
+        // ---------- вкладка «Профиль» ----------
+        function fmtDate(iso) {
+            const d = new Date(iso);
+            return isNaN(d) ? '' : d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+
+        let profileRenderedKind = null;
+        let profileNickname = '';
+        let profileTokenInput = '';
+        let tokenReveal = null;
+        let tokenRevealTimer = null;
+
+        function renderProfileView() {
+            const box = document.getElementById('profile-content');
+            if (!box) return;
+
+            const kind = (freshToken && authUser) ? 'fresh' : (authUser ? 'account' : 'guest');
+            const enter = kind !== profileRenderedKind ? 'pf-enter' : '';
+            profileRenderedKind = kind;
+
+            const card = 'bg-m3-surfaceContainer rounded-4xl border border-m3-outlineVariant/30 p-6 sm:p-8';
+            const input = 'w-full px-4 py-3 rounded-2xl bg-m3-surfaceContainerLow border border-m3-outlineVariant/40 text-m3-onSurface text-sm outline-none focus:border-m3-primary transition-colors';
+            const err = m => (profileError && profileMode === m) ? `<p class="pf-error text-sm text-red-400">${esc(profileError)}</p>` : '';
+            const busy = m => (profileBusy && profileMode === m) ? 'opacity-60 pointer-events-none' : '';
+            const spin = m => (profileBusy && profileMode === m) ? '<i class="fa-solid fa-spinner fa-spin mr-2"></i>' : '';
+
+            // 1) только что создан аккаунт — показываем токен
+            if (kind === 'fresh') {
+                box.innerHTML = `<div class="${card} ${enter} space-y-5 text-center">
+                    <div class="w-16 h-16 rounded-full bg-m3-primaryContainer text-m3-onPrimaryContainer mx-auto flex items-center justify-center text-2xl"><i class="fa-solid fa-key"></i></div>
+                    <h2 class="text-2xl font-bold text-m3-onSurface">Аккаунт создан!</h2>
+                    <p class="text-sm text-m3-secondary">Это ваш токен для входа на других устройствах. Сохраните его: регистр букв и знаки важны. Позже его можно будет скопировать в профиле на главном устройстве.</p>
+                    <div class="px-4 py-4 rounded-2xl bg-m3-surfaceContainerLow border border-m3-primary/40 font-mono text-sm sm:text-base font-bold text-m3-primary break-all select-all">${esc(freshToken)}</div>
+                    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                        <button onclick="copyToken()" class="px-5 py-2.5 rounded-full bg-m3-surfaceContainerHigh hover:bg-m3-surfaceContainerHighest text-m3-onSurface text-sm font-bold border border-m3-outlineVariant/40 cursor-pointer"><i class="fa-regular fa-copy mr-2"></i>Скопировать</button>
+                        <button onclick="finishFreshToken()" class="px-5 py-2.5 rounded-full bg-m3-primary text-m3-onPrimary text-sm font-bold cursor-pointer">Продолжить</button>
+                    </div>
+                </div>`;
+                return;
+            }
+
+            // 2) вошли в аккаунт
+            if (kind === 'account') {
+                const hist = getHistory().length;
+                const meta = [fmtDate(authUser.createdAt) && 'Создан ' + fmtDate(authUser.createdAt), authUser.createdOn].filter(Boolean).join(' · ');
+                const tokenBlock = sessionsCanManage ? `<div class="space-y-2">
+                        <div class="text-xs font-bold text-m3-outline uppercase tracking-wider">Токен для входа</div>
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 min-w-0 px-4 py-3 rounded-2xl bg-m3-surfaceContainerLow border border-m3-outlineVariant/30 font-mono text-xs sm:text-sm text-m3-secondary break-all select-all">${tokenReveal ? esc(tokenReveal) : '••••••••••••••••••••••••••••••••'}</div>
+                            <button onclick="toggleTokenReveal()" title="Показать / скрыть" class="w-11 h-11 shrink-0 rounded-full bg-m3-surfaceContainerHigh hover:bg-m3-surfaceContainerHighest text-m3-onSurface cursor-pointer"><i class="fa-solid ${tokenReveal ? 'fa-eye-slash' : 'fa-eye'}"></i></button>
+                            <button onclick="copyProfileToken()" title="Скопировать токен" class="w-11 h-11 shrink-0 rounded-full bg-m3-primaryContainer hover:opacity-90 text-m3-onPrimaryContainer cursor-pointer"><i class="fa-regular fa-copy"></i></button>
+                        </div>
+                    </div>` : '';
+                box.innerHTML = `<div class="${card} ${enter} space-y-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-16 h-16 shrink-0 rounded-full bg-m3-primaryContainer text-m3-onPrimaryContainer flex items-center justify-center text-2xl font-bold">${esc((authUser.nickname || '?').charAt(0).toUpperCase())}</div>
+                        <div class="min-w-0">
+                            <h2 class="text-2xl font-bold text-m3-onSurface truncate">${esc(authUser.nickname)}</h2>
+                            <p class="text-xs text-m3-outline mt-0.5">${esc(meta)}</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="rounded-2xl bg-m3-surfaceContainerLow border border-m3-outlineVariant/20 p-4">
+                            <div class="text-2xl font-bold text-m3-onSurface">${hist}</div>
+                            <div class="text-xs text-m3-outline mt-0.5"><i class="fa-solid fa-clock-rotate-left mr-1"></i>В истории</div>
+                        </div>
+                        <button onclick="switchNavTab('collections')" class="text-left rounded-2xl bg-m3-surfaceContainerLow hover:bg-m3-surfaceContainerHigh border border-m3-outlineVariant/20 p-4 cursor-pointer">
+                            <div class="text-2xl font-bold text-m3-onSurface">${favorites.length}</div>
+                            <div class="text-xs text-m3-outline mt-0.5"><i class="fa-solid fa-heart mr-1 text-m3-primary"></i>В избранном</div>
+                        </button>
+                    </div>
+                    ${tokenBlock}
+                    ${renderSessionsBlock()}
+                    <button onclick="profileLogout()" class="w-full px-5 py-3 rounded-full bg-m3-surfaceContainerHigh hover:bg-m3-surfaceContainerHighest text-red-300 text-sm font-bold border border-m3-outlineVariant/40 cursor-pointer"><i class="fa-solid fa-right-from-bracket mr-2"></i>Выйти из аккаунта</button>
+                </div>`;
+                return;
+            }
+
+            // 3) гость: создать аккаунт / войти (обе формы в DOM, переключаются анимацией)
+            box.innerHTML = `<div id="profile-guest" data-mode="${profileMode}" class="${card} ${enter} space-y-6">
+                <div class="text-center space-y-3">
+                    <div class="w-16 h-16 rounded-full bg-m3-primaryContainer text-m3-onPrimaryContainer mx-auto flex items-center justify-center text-2xl"><i class="fa-solid fa-user"></i></div>
+                    <h2 class="text-2xl font-bold text-m3-onSurface">Профиль</h2>
+                    <p class="text-sm text-m3-secondary">Аккаунт сохраняет историю просмотров и избранное и открывает их на любом устройстве.</p>
+                </div>
+                <div class="relative flex p-1 rounded-full bg-m3-surfaceContainerLow border border-m3-outlineVariant/20">
+                    <div class="pf-seg-pill absolute top-1 bottom-1 left-1 rounded-full bg-m3-primaryContainer shadow-sm" style="width: calc(50% - 4px)"></div>
+                    <button onclick="setProfileMode('create')" class="pf-seg-btn pf-seg-create relative z-10 flex-1 py-2.5 rounded-full text-sm cursor-pointer">Создать аккаунт</button>
+                    <button onclick="setProfileMode('login')" class="pf-seg-btn pf-seg-login relative z-10 flex-1 py-2.5 rounded-full text-sm cursor-pointer">Войти</button>
+                </div>
+                <div class="grid">
+                    <div class="pf-panel pf-panel-create space-y-3">
+                        <label class="text-xs font-bold text-m3-outline uppercase tracking-wider">Ваш ник</label>
+                        <input id="profile-nickname" maxlength="24" autocomplete="off" value="${esc(profileNickname)}" oninput="profileNickname=this.value" placeholder="Например, Кинолюб" class="${input}" onkeydown="if(event.key==='Enter')profileCreate()">
+                        ${err('create')}
+                        <button onclick="profileCreate()" class="w-full px-5 py-3 rounded-full bg-m3-primary text-m3-onPrimary text-sm font-bold cursor-pointer ${busy('create')}">${spin('create')}Создать аккаунт</button>
+                        <p class="text-[11px] text-m3-outline text-center">Просмотренное на этом устройстве перенесётся в новый аккаунт.</p>
+                    </div>
+                    <div class="pf-panel pf-panel-login space-y-3">
+                        <label class="text-xs font-bold text-m3-outline uppercase tracking-wider">Токен</label>
+                        <input id="profile-token" autocomplete="off" spellcheck="false" value="${esc(profileTokenInput)}" oninput="profileTokenInput=this.value" placeholder="Вставьте токен целиком" class="${input} font-mono" onkeydown="if(event.key==='Enter')profileLogin()">
+                        ${err('login')}
+                        <button onclick="profileLogin()" class="w-full px-5 py-3 rounded-full bg-m3-primary text-m3-onPrimary text-sm font-bold cursor-pointer ${busy('login')}">${spin('login')}Войти</button>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // ---------- копирование ----------
+        async function copyText(text) {
+            try { await navigator.clipboard.writeText(text); return true; } catch { /* нет доступа к буферу (например, http) */ }
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.setAttribute('readonly', '');
+                ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+                document.body.appendChild(ta);
+                ta.select(); ta.setSelectionRange(0, text.length);
+                const ok = document.execCommand('copy');
+                ta.remove();
+                return ok;
+            } catch { return false; }
+        }
+
+        async function fetchAccountToken() {
+            const data = await apiFetch('/api/token');
+            return data.token;
+        }
+
+        async function toggleTokenReveal() {
+            if (tokenReveal) { tokenReveal = null; clearTimeout(tokenRevealTimer); return renderProfileView(); }
+            try {
+                tokenReveal = await fetchAccountToken();
+                clearTimeout(tokenRevealTimer);
+                tokenRevealTimer = setTimeout(() => { tokenReveal = null; if (currentActiveTab === 'profile') renderProfileView(); }, 30000); // автоскрытие
+                renderProfileView();
+            } catch (e) { showToast(e.message); }
+        }
+
+        async function copyProfileToken() {
+            try {
+                const t = tokenReveal || await fetchAccountToken();
+                showToast(await copyText(t) ? 'Токен скопирован.' : 'Не удалось скопировать. Нажмите на глаз и скопируйте вручную.');
+            } catch (e) { showToast(e.message); }
+        }
+
+        // ---------- сеансы ----------
+        function fmtAgo(iso) {
+            const t = Date.parse(iso);
+            if (!t) return '';
+            const m = Math.floor((Date.now() - t) / 60000);
+            if (m < 1) return 'только что';
+            if (m < 60) return m + ' мин. назад';
+            const h = Math.floor(m / 60);
+            if (h < 24) return h + ' ч. назад';
+            const d = Math.floor(h / 24);
+            if (d < 7) return d + ' дн. назад';
+            return fmtDate(iso);
+        }
+
+        function osIcon(os) {
+            return ({ Windows: 'fa-brands fa-windows', macOS: 'fa-brands fa-apple', iOS: 'fa-brands fa-apple', Android: 'fa-brands fa-android', Linux: 'fa-brands fa-linux', ChromeOS: 'fa-brands fa-chrome' })[os] || 'fa-solid fa-globe';
+        }
+
+        function renderSessionsBlock() {
+            let body;
+            if (sessionsState === 'loading' && !sessionsList.length) {
+                body = '<div class="text-center py-6 text-m3-outline text-sm"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Загрузка сеансов…</div>';
+            } else if (sessionsState === 'error') {
+                body = '<div class="text-center py-4 text-sm text-red-400">Не удалось загрузить сеансы.</div>';
+            } else {
+                body = sessionsList.map(s => {
+                    const badges = [
+                        s.current ? '<span class="px-2 py-0.5 rounded-full bg-m3-primaryContainer text-m3-onPrimaryContainer text-[10px] font-bold">Это устройство</span>' : '',
+                        s.main ? '<span class="px-2 py-0.5 rounded-full bg-m3-primary text-m3-onPrimary text-[10px] font-bold"><i class="fa-solid fa-shield-halved mr-1"></i>Главная</span>' : ''
+                    ].join('');
+                    const canDelete = sessionsCanManage && !s.current && !s.main;
+                    return `<div data-session="${esc(s.id)}" class="flex items-center gap-3 p-3 rounded-2xl bg-m3-surfaceContainerLow border border-m3-outlineVariant/20">
+                        <div class="w-11 h-11 shrink-0 rounded-2xl bg-m3-primaryContainer text-m3-onPrimaryContainer flex items-center justify-center text-lg"><i class="${osIcon(s.os)}"></i></div>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                <span class="text-sm font-bold text-m3-onSurface">${esc(s.os)} · ${esc(s.browser)}</span>${badges}
+                            </div>
+                            <div class="text-[11px] text-m3-outline mt-0.5">${s.current ? 'Активен сейчас' : 'Активность: ' + esc(fmtAgo(s.lastSeen))} · вход ${esc(fmtDate(s.createdAt))} · IP ${esc(s.ipMask)}</div>
+                        </div>
+                        ${canDelete ? `<button onclick="deleteSession('${esc(s.id)}', this)" title="Завершить сеанс" class="w-10 h-10 shrink-0 rounded-full bg-m3-surfaceContainerHigh hover:bg-red-500/20 text-red-300 transition-colors cursor-pointer"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+                    </div>`;
+                }).join('');
+            }
+
+            const others = sessionsList.filter(s => !s.current).length;
+            const killAll = sessionsCanManage && others > 0
+                ? `<button onclick="deleteOtherSessions()" class="w-full px-4 py-2.5 rounded-full bg-m3-surfaceContainerHigh hover:bg-red-500/20 text-red-300 text-xs font-bold border border-m3-outlineVariant/40 transition-colors cursor-pointer">Завершить все остальные сеансы</button>` : '';
+            const hint = sessionsList.length && !sessionsCanManage
+                ? '<p class="text-[11px] text-m3-outline">Завершать чужие сеансы может только главный — тот, с которого был первый вход.</p>' : '';
+
+            return `<div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="text-xs font-bold text-m3-outline uppercase tracking-wider">Сеансы</div>
+                    <span class="text-xs text-m3-outline">${sessionsList.length || ''}</span>
+                </div>
+                <div class="space-y-2">${body}</div>
+                ${killAll}${hint}
+            </div>`;
+        }
+
+        async function loadSessions() {
+            if (!authUser) return;
+            sessionsState = 'loading';
+            try {
+                const data = await apiFetch('/api/sessions');
+                sessionsList = data.sessions || [];
+                sessionsCanManage = !!data.canManage;
+                sessionsState = 'idle';
+            } catch (e) {
+                if (e.status === 0 && sessionsList.length) sessionsState = 'idle'; else sessionsState = 'error';
+            }
+            if (currentActiveTab === 'profile' && !freshToken) renderProfileView();
+        }
+
+        async function deleteSession(id, btn) {
+            if (!confirm('Завершить этот сеанс? Устройство будет разлогинено.')) return;
+            try {
+                await apiFetch('/api/sessions/' + id, { method: 'DELETE' });
+                const row = btn && btn.closest('[data-session]');
+                if (row) { // плавно «схлопываем» строку
+                    row.style.maxHeight = row.offsetHeight + 'px';
+                    void row.offsetWidth;
+                    row.classList.add('pf-leave');
+                    await new Promise(r => setTimeout(r, 300));
+                }
+                showToast('Сеанс завершён.');
+            } catch (e) { showToast(e.message); }
+            loadSessions();
+        }
+
+        async function deleteOtherSessions() {
+            if (!confirm('Завершить все сеансы, кроме этого устройства?')) return;
+            try {
+                await apiFetch('/api/sessions', { method: 'DELETE' });
+                showToast('Остальные сеансы завершены.');
+            } catch (e) { showToast(e.message); }
+            loadSessions();
+        }
+
+        // если сеанс завершили на другом устройстве — узнаем, когда вкладка снова станет активной
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && authToken) apiFetch('/api/me').catch(() => {});
+        });
+
+        function setProfileMode(mode) {
+            if (profileMode === mode) return;
+            profileMode = mode;
+            profileError = '';
+            const root = document.getElementById('profile-guest');
+            if (root) { // меняем на месте, чтобы сработала анимация
+                root.dataset.mode = mode;
+                root.querySelectorAll('.pf-error').forEach(e => e.remove());
+            } else renderProfileView();
+        }
+
+        function clientInfo() {
+            return {
+                platform: (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '',
+                lang: navigator.language || '',
+                tz: (Intl.DateTimeFormat().resolvedOptions().timeZone) || '',
+                screen: screen.width + 'x' + screen.height
+            };
+        }
+
+        async function profileCreate() {
+            const nickname = (document.getElementById('profile-nickname').value || '').trim();
+            profileNickname = nickname;
+            if (nickname.length < 2) { profileError = 'Ник должен быть от 2 до 24 символов.'; return renderProfileView(); }
+            profileBusy = true; profileError = ''; renderProfileView();
+            try {
+                const guestHistory = getHistory().map(slimMovie).filter(Boolean);
+                const data = await apiFetch('/api/register', { method: 'POST', token: null, body: { nickname, history: guestHistory, client: clientInfo() } });
+                authToken = data.sessionKey;
+                localStorage.setItem('zibSession', authToken);
+                freshToken = data.token; profileNickname = '';
+                profileBusy = false;
+                applyAccount(data);
+            } catch (e) {
+                profileBusy = false; profileError = e.message; renderProfileView();
+            }
+        }
+
+        async function profileLogin() {
+            const token = (document.getElementById('profile-token').value || '').trim();
+            profileTokenInput = token;
+            if (!token) { profileError = 'Вставьте токен.'; return renderProfileView(); }
+            profileBusy = true; profileError = ''; renderProfileView();
+            try {
+                const data = await apiFetch('/api/login', { method: 'POST', token: null, body: { token } });
+                authToken = data.sessionKey;
+                localStorage.setItem('zibSession', authToken);
+                profileBusy = false; profileTokenInput = '';
+                applyAccount(data);
+                loadSessions();
+                showToast('Добро пожаловать, ' + data.user.nickname + '!');
+            } catch (e) {
+                profileBusy = false; profileError = e.message; renderProfileView();
+            }
+        }
+
+        async function profileLogout() {
+            if (sessionsList.length <= 1 && !confirm('Это ваш единственный сеанс. Если выйти, аккаунт будет удалён вместе с историей и избранным, так как не останется ни одного сеанса. Продолжить?')) return;
+            let deleted = false;
+            try { deleted = !!(await apiFetch('/api/logout', { method: 'POST' })).accountDeleted; } catch { /* сеанс и так недействителен */ }
+            clearSession();
+            profileMode = 'login';
+            renderProfileView();
+            showToast(deleted ? 'Аккаунт удалён: не осталось ни одного сеанса.' : 'Вы вышли из аккаунта.');
+        }
+
+        function finishFreshToken() { freshToken = null; renderProfileView(); loadSessions(); }
+
+        async function copyToken() {
+            if (!freshToken) return;
+            showToast(await copyText(freshToken) ? 'Токен скопирован.' : 'Не удалось скопировать. Выделите токен и скопируйте вручную.');
         }
 
         function scrollSlider(sliderId, direction) {
@@ -1157,6 +1996,7 @@
         }
 
         async function openMoviePlayer(kpId) {
+            saveListState(kpId);
             document.getElementById('search-suggestions').classList.add('hidden');
             document.getElementById('search-input').value = '';
 
@@ -1170,6 +2010,8 @@
             if(popularView) hideMainView(popularView);
             if(searchView) hideMainView(searchView);
             if(genericView) hideMainView(genericView);
+            hideMainView(document.getElementById('profile-view'));
+            hideMainView(document.getElementById('collections-view'));
             showMainView(playerView, 'right');
 
             document.getElementById('current-player-kp-id').innerText = kpId;
@@ -1180,6 +2022,7 @@
 
             activeMovieId = kpId;
             activeMovieType = 'FILM';
+            updatePlayerFavBtn();
 
             const wrapper = document.getElementById('player-wrapper');
             if (wrapper) {
@@ -1217,6 +2060,8 @@
 
                     document.getElementById('meta-bg-blur').style.backgroundImage = `url('https://st.kp.yandex.net/images/film_big/${kpId}.jpg')`;
 
+                    const slimFilm = slimMovie(film);
+                    if (slimFilm) { movieRegistry.set(String(kpId), slimFilm); }
                     addToHistory(film);
                 }
             } catch (err) {
@@ -1236,6 +2081,9 @@
             if (dropdown.classList.contains('hidden')) {
                 dropdown.classList.remove('hidden');
                 dropdown.classList.add('flex');
+                dropdown.classList.remove('animate-fade-in-down');
+                void dropdown.offsetWidth;
+                dropdown.classList.add('animate-fade-in-down');
                 if (arrow) arrow.style.transform = 'rotate(180deg)';
             } else {
                 dropdown.classList.add('hidden');
