@@ -7,14 +7,49 @@
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        m3: {
+                            surface: 'rgb(var(--m3-surface) / <alpha-value>)',
+                            surfaceDim: 'rgb(var(--m3-surface-dim) / <alpha-value>)',
+                            surfaceBright: 'rgb(var(--m3-surface-bright) / <alpha-value>)',
+                            surfaceContainerLowest: 'rgb(var(--m3-surface-container-lowest) / <alpha-value>)',
+                            surfaceContainerLow: 'rgb(var(--m3-surface-container-low) / <alpha-value>)',
+                            surfaceContainer: 'rgb(var(--m3-surface-container) / <alpha-value>)',
+                            surfaceContainerHigh: 'rgb(var(--m3-surface-container-high) / <alpha-value>)',
+                            surfaceContainerHighest: 'rgb(var(--m3-surface-container-highest) / <alpha-value>)',
+                            primary: 'rgb(var(--m3-primary) / <alpha-value>)',
+                            onPrimary: 'rgb(var(--m3-on-primary) / <alpha-value>)',
+                            primaryContainer: 'rgb(var(--m3-primary-container) / <alpha-value>)',
+                            onPrimaryContainer: 'rgb(var(--m3-on-primary-container) / <alpha-value>)',
+                            secondary: 'rgb(var(--m3-secondary) / <alpha-value>)',
+                            onSecondary: 'rgb(var(--m3-on-secondary) / <alpha-value>)',
+                            outline: 'rgb(var(--m3-outline) / <alpha-value>)',
+                            outlineVariant: 'rgb(var(--m3-outline-variant) / <alpha-value>)',
+                            onSurface: 'rgb(var(--m3-on-surface) / <alpha-value>)'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Roboto', 'Inter', 'sans-serif']
+                    },
+                    borderRadius: {
+                        '4xl': '2rem'
+                    }
+                }
+            }
+        }
+    </script>
 
     <!-- FontAwesome & Hls.js CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
-    <!-- Custom CSS & JS -->
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
-    <script src="script.js" defer></script>
 </head>
 <body class="min-h-screen flex flex-col font-sans antialiased overflow-x-hidden">
 
@@ -36,6 +71,7 @@
 
             <!-- Unified Material 3 Navigation Tabs -->
             <nav class="relative flex items-center justify-center gap-1 sm:gap-2 bg-transparent p-1.5 rounded-full text-xs sm:text-sm font-medium z-0 w-full md:w-auto overflow-x-auto hide-scrollbar flex-nowrap">
+                <!-- Smooth Tonal Pill Indicator -->
                 <div id="nav-indicator" class="absolute top-1.5 bottom-1.5 bg-m3-primaryContainer rounded-full transition-all duration-300 ease-in-out -z-10 shadow-sm" style="width: 0px; left: 0px;"></div>
 
                 <button onclick="switchNavTab('home')" id="nav-btn-home" class="nav-tab-btn is-active-tab shrink-0 px-3 sm:px-4 py-2 rounded-full transition-colors duration-300 flex items-center text-m3-onPrimaryContainer font-bold cursor-pointer">
@@ -51,10 +87,12 @@
                     <i class="fa-solid fa-user text-base"></i> <span class="nav-label">Профиль</span>
                 </button>
 
+                <!-- Dynamic Search Tab -->
                 <button onclick="switchNavTab('search')" id="nav-btn-search" class="nav-tab-btn hidden shrink-0 px-3 sm:px-4 py-2 rounded-full transition-colors duration-300 items-center text-m3-secondary hover:text-m3-onSurface cursor-pointer">
                     <i class="fa-solid fa-magnifying-glass text-base"></i> <span class="nav-label">Поиск</span>
                 </button>
 
+                <!-- Settings Icon Tab -->
                 <button onclick="switchNavTab('settings')" id="nav-btn-settings" title="Настройки" class="nav-tab-btn shrink-0 px-3 py-2 rounded-full transition-colors duration-300 flex items-center justify-center text-m3-secondary hover:text-m3-onSurface cursor-pointer">
                     <i class="fa-solid fa-gear text-base"></i><span class="nav-label nav-label-mobile-only">Настройки</span>
                 </button>
@@ -73,6 +111,7 @@
                         <i id="search-btn-icon" class="fa-solid fa-arrow-right"></i>
                     </button>
 
+                    <!-- Floating Suggestions Dropdown -->
                     <div id="search-suggestions" class="absolute top-full left-0 right-0 mt-2 bg-m3-surfaceContainerHigh/95 backdrop-blur-xl border border-m3-outlineVariant/40 rounded-2xl shadow-2xl z-50 hidden max-h-80 overflow-y-auto overflow-x-hidden flex-col">
                         <div id="suggestions-container" class="p-2 space-y-1">
                             <div class="text-xs text-m3-outline p-3 text-center">Начните вводить название...</div>
@@ -89,12 +128,13 @@
 
         <!-- VIEW 1: HOME -->
         <section id="home-view" class="view-anim transition-all duration-300 ease-out space-y-10">
+            <!-- Popular Slider -->
             <div class="space-y-4">
                 <div class="flex items-center justify-between">
                     <h2 class="text-xl font-bold text-m3-onSurface tracking-wide flex items-center gap-2">
                         <i class="fa-solid fa-fire text-m3-primary"></i> Популярное сейчас
                     </h2>
-                    <button onclick="switchNavTab('popular')" class="text-xs text-m3-primary hover:text-m3-onSurface transition-colors">Смотреть популяные<i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></button>
+                    <button onclick="switchNavTab('popular')" class="text-xs text-m3-primary hover:text-m3-onSurface transition-colors">Смотреть популярные<i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></button>
                 </div>
                 <div class="relative group/slider">
                     <div class="slider-fade slider-fade-l"></div><div class="slider-fade slider-fade-r"></div>
@@ -108,6 +148,7 @@
                 </div>
             </div>
 
+            <!-- History Slider -->
             <div class="space-y-4" id="history-section">
                 <div class="flex items-center justify-between">
                     <h2 class="text-xl font-bold text-m3-onSurface tracking-wide flex items-center gap-2">
@@ -159,6 +200,8 @@
 
         <!-- VIEW 2: PLAYER VIEW -->
         <section id="player-view" class="view-anim transition-all duration-300 ease-out hidden space-y-6">
+
+            <!-- Player Toolbar -->
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
                     <button onclick="showCatalogView()" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-m3-surfaceContainerHigh hover:bg-m3-surfaceContainerHighest text-m3-onPrimaryContainer border border-m3-outlineVariant/40 transition-colors text-xs font-medium cursor-pointer">
@@ -172,6 +215,7 @@
                     </button>
                 </div>
 
+                <!-- Player Selector Drawer Menu -->
                 <div class="relative ml-auto">
                     <button onclick="togglePlayerSelectMenu()" id="player-selector-tab-btn" class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-m3-surfaceContainerHigh hover:bg-m3-surfaceContainerHighest text-m3-onSurface font-medium text-xs transition-all border border-m3-outlineVariant/30 cursor-pointer">
                         <i class="fa-solid fa-server text-m3-primary"></i>
@@ -198,6 +242,7 @@
                 </div>
             </div>
 
+            <!-- Video Player Frame -->
             <div class="bg-m3-surfaceContainer rounded-3xl p-1 sm:p-2 border border-m3-outlineVariant/30 shadow-2xl">
                 <div class="relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-inner group" id="player-wrapper">
                     <div class="absolute inset-0 flex flex-col items-center justify-center text-m3-outline gap-3">
@@ -207,6 +252,7 @@
                 </div>
             </div>
 
+            <!-- Dynamic Metadata -->
             <div class="bg-m3-surfaceContainerHigh p-6 sm:p-8 rounded-4xl border border-m3-outlineVariant/30 space-y-4 shadow-lg relative overflow-hidden">
                 <div id="meta-bg-blur" class="absolute inset-0 bg-cover bg-center opacity-10 blur-xl scale-110 pointer-events-none"></div>
 
@@ -225,7 +271,7 @@
             </div>
         </section>
 
-        <!-- VIEW: COLLECTIONS -->
+        <!-- VIEW: COLLECTIONS (Подборки) -->
         <section id="collections-view" class="view-anim transition-all duration-300 ease-out hidden space-y-6">
             <div>
                 <h2 class="text-2xl font-bold text-m3-onSurface flex items-center gap-2">
@@ -246,7 +292,7 @@
             </div>
         </section>
 
-        <!-- VIEW: PROFILE -->
+        <!-- VIEW: PROFILE (Профиль) -->
         <section id="profile-view" class="view-anim transition-all duration-300 ease-out hidden">
             <div id="profile-content" class="max-w-xl mx-auto"></div>
         </section>
@@ -269,6 +315,7 @@
                 <p class="text-m3-secondary text-sm mt-1">Приглушённая и облегчённая палитра Material You.</p>
             </div>
 
+            <!-- Тема оформления -->
             <div class="bg-m3-surfaceContainer p-5 sm:p-6 rounded-3xl border border-m3-outlineVariant/30 space-y-4">
                 <h3 class="font-bold text-m3-onSurface text-sm">Режим темы</h3>
                 <div class="grid grid-cols-2 gap-3">
@@ -281,12 +328,14 @@
                 </div>
             </div>
 
+            <!-- Выбор приглушённого цвета -->
             <div class="bg-m3-surfaceContainer p-5 sm:p-6 rounded-3xl border border-m3-outlineVariant/30 space-y-5">
                 <div>
                     <h3 class="font-bold text-m3-onSurface text-sm">Приглушённые природные пресеты</h3>
                     <p class="text-m3-outline text-xs mt-0.5">Выберите естественный матовый оттенок или укажите свой цвет.</p>
                 </div>
 
+                <!-- Soft Desaturated Swatches Grid -->
                 <div class="flex flex-wrap gap-3" id="color-swatches-container">
                     <button onclick="setThemeColor('#8C694D')" data-color="#8C694D" class="color-swatch-btn w-11 h-11 rounded-full border-2 border-transparent transition-all flex items-center justify-center cursor-pointer shadow-md" style="background:#8C694D" title="Песочно-кофейный">
                         <i class="fa-solid fa-check text-white text-xs hidden check-icon"></i>
@@ -314,6 +363,7 @@
                     </button>
                 </div>
 
+                <!-- Custom Color Picker Input -->
                 <div class="pt-2 border-t border-m3-outlineVariant/20 flex items-center justify-between">
                     <span class="text-xs font-semibold text-m3-onSurface flex items-center gap-2">
                         <i class="fa-solid fa-palette text-m3-primary"></i> Свой оттенок из палитры
@@ -335,5 +385,7 @@
         </div>
     </footer>
 
+    <!-- JavaScript Application Logic -->
+    <script src="script.js" defer></script>
 </body>
 </html>

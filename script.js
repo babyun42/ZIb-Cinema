@@ -1,39 +1,3 @@
-// Конфигурация Tailwind CSS
-tailwind.config = {
-    darkMode: 'class',
-    theme: {
-        extend: {
-            colors: {
-                m3: {
-                    surface: 'rgb(var(--m3-surface) / <alpha-value>)',
-                    surfaceDim: 'rgb(var(--m3-surface-dim) / <alpha-value>)',
-                    surfaceBright: 'rgb(var(--m3-surface-bright) / <alpha-value>)',
-                    surfaceContainerLowest: 'rgb(var(--m3-surface-container-lowest) / <alpha-value>)',
-                    surfaceContainerLow: 'rgb(var(--m3-surface-container-low) / <alpha-value>)',
-                    surfaceContainer: 'rgb(var(--m3-surface-container) / <alpha-value>)',
-                    surfaceContainerHigh: 'rgb(var(--m3-surface-container-high) / <alpha-value>)',
-                    surfaceContainerHighest: 'rgb(var(--m3-surface-container-highest) / <alpha-value>)',
-                    primary: 'rgb(var(--m3-primary) / <alpha-value>)',
-                    onPrimary: 'rgb(var(--m3-on-primary) / <alpha-value>)',
-                    primaryContainer: 'rgb(var(--m3-primary-container) / <alpha-value>)',
-                    onPrimaryContainer: 'rgb(var(--m3-on-primary-container) / <alpha-value>)',
-                    secondary: 'rgb(var(--m3-secondary) / <alpha-value>)',
-                    onSecondary: 'rgb(var(--m3-on-secondary) / <alpha-value>)',
-                    outline: 'rgb(var(--m3-outline) / <alpha-value>)',
-                    outlineVariant: 'rgb(var(--m3-outline-variant) / <alpha-value>)',
-                    onSurface: 'rgb(var(--m3-on-surface) / <alpha-value>)'
-                }
-            },
-            fontFamily: {
-                sans: ['Roboto', 'Inter', 'sans-serif']
-            },
-            borderRadius: {
-                '4xl': '2rem'
-            }
-        }
-    }
-};
-
 // Material You Soft / Desaturated Color Generator
 let currentThemeMode = 'dark';
 let currentThemeColor = '#8C694D';
@@ -172,7 +136,6 @@ function applyTheme(mode, colorHex) {
     applyTheme(savedMode, savedColor);
 })();
 
-// JavaScript Application Logic
 const KP_API_KEY = '8c8e1a50-6322-4135-8875-5d40a5420d86';
 const API_HEADERS = { 'X-API-KEY': KP_API_KEY, 'Content-Type': 'application/json' };
 
@@ -716,7 +679,6 @@ async function loadMorePopular() {
     }
 }
 
-// ================= ПРОФИЛИ, ИСТОРИЯ, ИЗБРАННОЕ =================
 const ZIB_API = (() => {
     const custom = localStorage.getItem('zib_api_base');
     if (custom) return custom.replace(/\/$/, '');
@@ -1032,7 +994,7 @@ function renderProfileView() {
         box.innerHTML = `<div class="${card} ${enter} space-y-5 text-center">
             <div class="w-16 h-16 rounded-full bg-m3-primaryContainer text-m3-onPrimaryContainer mx-auto flex items-center justify-center text-2xl"><i class="fa-solid fa-key"></i></div>
             <h2 class="text-2xl font-bold text-m3-onSurface">Аккаунт создан!</h2>
-            <p class="text-sm text-m3-secondary">Это ваш токен для входа на других устройствах. Сохраните его: регистр букв и знаки важны.</p>
+            <p class="text-sm text-m3-secondary">Это ваш токен для входа на других устройствах. Сохраните его: регистр букв и знаки важны. Позже его можно будет скопировать в профиле на главном устройстве.</p>
             <div class="px-4 py-4 rounded-2xl bg-m3-surfaceContainerLow border border-m3-primary/40 font-mono text-sm sm:text-base font-bold text-m3-primary break-all select-all">${esc(freshToken)}</div>
             <div class="flex flex-col sm:flex-row gap-3 justify-center">
                 <button onclick="copyToken()" class="px-5 py-2.5 rounded-full bg-m3-surfaceContainerHigh hover:bg-m3-surfaceContainerHighest text-m3-onSurface text-sm font-bold border border-m3-outlineVariant/40 cursor-pointer"><i class="fa-regular fa-copy mr-2"></i>Скопировать</button>
@@ -1140,7 +1102,7 @@ async function toggleTokenReveal() {
 async function copyProfileToken() {
     try {
         const t = tokenReveal || await fetchAccountToken();
-        showToast(await copyText(t) ? 'Токен скопирован.' : 'Не удалось скопировать. Нажмите на глаз и скопируйте вручную.');
+        showToast(await copyText(t) ? 'Токен скопирован.' : 'Не удалось скопировать. Скопируйте вручную.');
     } catch (e) { showToast(e.message); }
 }
 
@@ -1154,4 +1116,332 @@ function fmtAgo(iso) {
     if (h < 24) return h + ' ч. назад';
     const d = Math.floor(h / 24);
     return d + ' дн. назад';
+}
+
+function renderSessionsBlock() {
+    if (!sessionsCanManage) return '';
+    if (sessionsState === 'loading') {
+        return `<div class="space-y-2"><div class="text-xs font-bold text-m3-outline uppercase tracking-wider">Активные сеансы</div><div class="text-xs text-m3-outline p-3 text-center bg-m3-surfaceContainerLow rounded-2xl border border-m3-outlineVariant/20"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Загрузка сеансов...</div></div>`;
+    }
+    if (sessionsState === 'error') {
+        return `<div class="space-y-2"><div class="text-xs font-bold text-m3-outline uppercase tracking-wider">Активные сеансы</div><div class="text-xs text-red-400 p-3 text-center bg-m3-surfaceContainerLow rounded-2xl border border-m3-outlineVariant/20">Не удалось загрузить список сеансов. <button onclick="loadSessions()" class="underline font-bold">Повторить</button></div></div>`;
+    }
+    if (!sessionsList.length) return '';
+
+    const items = sessionsList.map(s => {
+        const current = s.current ? '<span class="text-[10px] bg-m3-primaryContainer text-m3-onPrimaryContainer px-2 py-0.5 rounded-full font-bold ml-2">Текущий</span>' : '';
+        const title = esc(s.device || s.userAgent || 'Устройство');
+        const time = s.lastActiveAt ? fmtAgo(s.lastActiveAt) : '';
+        const btn = s.current ? '' : `<button onclick="revokeSession('${s.id}')" title="Завершить" class="text-xs text-red-400 hover:text-red-300 p-2 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>`;
+        return `<div class="flex items-center justify-between p-3 rounded-2xl bg-m3-surfaceContainerLow border border-m3-outlineVariant/20 text-xs">
+            <div>
+                <div class="font-bold text-m3-onSurface flex items-center">${title}${current}</div>
+                <div class="text-m3-outline mt-0.5">${time}</div>
+            </div>
+            ${btn}
+        </div>`;
+    }).join('');
+
+    return `<div class="space-y-2">
+        <div class="text-xs font-bold text-m3-outline uppercase tracking-wider">Активные сеансы</div>
+        <div class="space-y-2">${items}</div>
+    </div>`;
+}
+
+async function loadSessions() {
+    if (!authUser || freshToken) return;
+    sessionsState = 'loading';
+    if (currentActiveTab === 'profile') renderProfileView();
+    try {
+        const res = await apiFetch('/api/sessions');
+        sessionsList = res.sessions || [];
+        sessionsCanManage = true;
+        sessionsState = 'idle';
+    } catch (e) {
+        sessionsCanManage = false;
+        sessionsState = 'error';
+    }
+    if (currentActiveTab === 'profile') renderProfileView();
+}
+
+async function revokeSession(sessionId) {
+    try {
+        await apiFetch('/api/sessions/' + sessionId, { method: 'DELETE' });
+        sessionsList = sessionsList.filter(s => s.id !== sessionId);
+        showToast('Сеанс завершён');
+        renderProfileView();
+    } catch (e) {
+        showToast('Не удалось завершить сеанс: ' + e.message);
+    }
+}
+
+async function profileCreate() {
+    const nickname = profileNickname.trim();
+    if (!nickname) {
+        profileError = 'Введите никнейм';
+        renderProfileView();
+        return;
+    }
+    profileError = '';
+    profileBusy = true;
+    renderProfileView();
+    try {
+        const history = getHistory();
+        const res = await apiFetch('/api/register', {
+            method: 'POST',
+            body: { nickname, history }
+        });
+        authToken = res.sessionToken || res.token;
+        freshToken = res.accountToken || res.token;
+        localStorage.setItem('zibSession', authToken);
+        applyAccount(res);
+        profileBusy = false;
+        renderProfileView();
+    } catch (e) {
+        profileError = e.message;
+        profileBusy = false;
+        renderProfileView();
+    }
+}
+
+async function profileLogin() {
+    const token = profileTokenInput.trim();
+    if (!token) {
+        profileError = 'Введите токен';
+        renderProfileView();
+        return;
+    }
+    profileError = '';
+    profileBusy = true;
+    renderProfileView();
+    try {
+        const res = await apiFetch('/api/login', {
+            method: 'POST',
+            body: { token }
+        });
+        authToken = res.sessionToken || res.token;
+        freshToken = null;
+        localStorage.setItem('zibSession', authToken);
+        applyAccount(res);
+        profileBusy = false;
+        renderProfileView();
+    } catch (e) {
+        profileError = e.message;
+        profileBusy = false;
+        renderProfileView();
+    }
+}
+
+async function profileLogout() {
+    if (authToken) {
+        try {
+            await apiFetch('/api/logout', { method: 'POST' });
+        } catch (e) {}
+    }
+    clearSession();
+    showToast('Вы вышли из аккаунта');
+}
+
+async function copyToken() {
+    if (freshToken) {
+        const ok = await copyText(freshToken);
+        showToast(ok ? 'Токен скопирован в буфер обмена.' : 'Не удалось скопировать.');
+    }
+}
+
+function finishFreshToken() {
+    freshToken = null;
+    renderProfileView();
+}
+
+function setProfileMode(mode) {
+    profileMode = mode;
+    profileError = '';
+    const el = document.getElementById('profile-guest');
+    if (el) el.setAttribute('data-mode', mode);
+    else renderProfileView();
+}
+
+function handleLiveSearch(query) {
+    clearTimeout(searchDebounceTimer);
+    const container = document.getElementById('suggestions-container');
+    const dropdown = document.getElementById('search-suggestions');
+
+    if (!query.trim()) {
+        container.innerHTML = `<div class="text-xs text-m3-outline p-3 text-center">Начните вводить название...</div>`;
+        return;
+    }
+
+    searchDebounceTimer = setTimeout(async () => {
+        container.innerHTML = `<div class="text-xs text-m3-outline p-3 text-center"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Поиск...</div>`;
+        dropdown.classList.remove('hidden');
+
+        try {
+            const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword?keyword=${encodeURIComponent(query)}&page=1`, { headers: API_HEADERS });
+            const data = await res.json();
+
+            if (data.films && data.films.length > 0) {
+                container.innerHTML = data.films.slice(0, 6).map(movie => {
+                    const mId = movie.filmId || movie.kinopoiskId;
+                    const name = esc(movie.nameRu || movie.nameEn || 'Без названия');
+                    const year = movie.year || '';
+                    const rating = movie.rating || '—';
+                    return `<div onclick="openMoviePlayer('${mId}')" class="flex items-center gap-3 p-2 hover:bg-m3-surfaceContainerHighest rounded-xl cursor-pointer transition-colors">
+                        <img src="https://st.kp.yandex.net/images/film_big/${mId}.jpg" onerror="this.onerror=null; this.src='${fallbackPoster}';" class="w-10 h-14 object-cover rounded-lg bg-m3-surfaceContainerLowest">
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xs font-bold text-m3-onSurface truncate">${name}</div>
+                            <div class="text-[10px] text-m3-outline flex items-center gap-2 mt-0.5">
+                                <span>${year}</span>
+                                <span class="text-amber-300 font-bold">★ ${rating}</span>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+            } else {
+                container.innerHTML = `<div class="text-xs text-m3-outline p-3 text-center">Ничего не найдено</div>`;
+            }
+        } catch (e) {
+            container.innerHTML = `<div class="text-xs text-m3-outline p-3 text-center">Ошибка поиска</div>`;
+        }
+    }, 300);
+}
+
+async function executeDirectSearch() {
+    const input = document.getElementById('search-input');
+    const query = input ? input.value.trim() : '';
+    if (!query) return;
+
+    document.getElementById('search-suggestions').classList.add('hidden');
+    document.getElementById('search-query-label').textContent = query;
+
+    if (/^\d+$/.test(query)) {
+        openMoviePlayer(query);
+        return;
+    }
+
+    switchNavTab('search');
+    const grid = document.getElementById('search-grid-container');
+    const countLabel = document.getElementById('search-results-count');
+    grid.innerHTML = `<div class="col-span-full text-center py-10"><i class="fa-solid fa-spinner fa-spin text-m3-primary text-2xl"></i><span class="ml-3 text-m3-outline text-sm block mt-2">Поиск результатов...</span></div>`;
+
+    try {
+        const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword?keyword=${encodeURIComponent(query)}&page=1`, { headers: API_HEADERS });
+        const data = await res.json();
+
+        if (data.films && data.films.length > 0) {
+            countLabel.textContent = `Найдено: ${data.films.length}`;
+            grid.innerHTML = data.films.map(movie => createMovieCard(movie, false)).join('');
+        } else {
+            countLabel.textContent = 'Найдено: 0';
+            grid.innerHTML = `<div class="col-span-full text-center py-10 text-m3-outline text-sm">По вашему запросу ничего не найдено.</div>`;
+        }
+    } catch (e) {
+        countLabel.textContent = 'Ошибка';
+        grid.innerHTML = `<div class="col-span-full text-center py-10 text-m3-outline text-sm">Не удалось загрузить результаты поиска.</div>`;
+    }
+}
+
+async function openMoviePlayer(id) {
+    saveListState(id);
+    activeMovieId = String(id);
+    document.getElementById('current-player-kp-id').textContent = activeMovieId;
+    updatePlayerFavBtn();
+
+    switchNavTab('player');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    renderPlayerFrame();
+
+    try {
+        const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.2/films/${id}`, { headers: API_HEADERS });
+        if (!res.ok) throw new Error('Ошибка сети');
+        const movie = await res.json();
+
+        activeMovieType = movie.type || 'FILM';
+        addToHistory(movie);
+
+        const title = movie.nameRu || movie.nameOriginal || movie.nameEn || 'Без названия';
+        const year = movie.year || '';
+        const rating = movie.ratingKinopoisk || movie.ratingImdb || '—';
+        const genres = (movie.genres || []).map(g => g.genre).join(', ');
+        const countries = (movie.countries || []).map(c => c.country).join(', ');
+        const desc = movie.description || 'Описание отсутствует.';
+
+        document.getElementById('player-movie-title').textContent = title;
+        document.getElementById('player-movie-description').textContent = desc;
+        document.getElementById('player-movie-meta').innerHTML = `
+            <span class="bg-m3-primaryContainer text-m3-onPrimaryContainer px-2.5 py-1 rounded-full font-bold">★ ${rating}</span>
+            <span>${year}</span>
+            ${countries ? `<span>• ${countries}</span>` : ''}
+            ${genres ? `<span>• ${genres}</span>` : ''}
+        `;
+
+        const blurBg = document.getElementById('meta-bg-blur');
+        if (blurBg) blurBg.style.backgroundImage = `url('https://st.kp.yandex.net/images/film_big/${id}.jpg')`;
+
+    } catch (e) {
+        document.getElementById('player-movie-title').textContent = 'Фильм ID: ' + id;
+        document.getElementById('player-movie-description').textContent = 'Информация временно недоступна.';
+    }
+}
+
+function renderPlayerFrame() {
+    const wrapper = document.getElementById('player-wrapper');
+    if (!wrapper || !activeMovieId) return;
+
+    let url = '';
+    if (currentMode === 'external_sspoisk') {
+        url = `https://sspoisk.ru/film/${activeMovieId}/`;
+    } else if (currentMode === 'external_kinobox') {
+        url = `https://kinobox.in/kinopoisk/${activeMovieId}`;
+    } else if (currentMode === 'external_gokino') {
+        url = `https://gokino.online/kinopoisk/${activeMovieId}`;
+    }
+
+    wrapper.innerHTML = `<iframe src="${url}" class="w-full h-full border-0 rounded-2xl" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe>`;
+}
+
+function setPlayerMode(mode) {
+    currentMode = mode;
+    const badgeMap = {
+        'external_sspoisk': 'SSpoisk',
+        'external_kinobox': 'Kinobox',
+        'external_gokino': 'Gokino'
+    };
+    document.getElementById('active-player-name-badge').textContent = badgeMap[mode] || 'SSpoisk';
+
+    document.querySelectorAll('#player-selector-dropdown .tab-btn').forEach(btn => {
+        const isCurrent = btn.id === 'btn-mode-' + mode;
+        const check = btn.querySelector('.check-icon');
+        if (check) check.classList.toggle('hidden', !isCurrent);
+    });
+
+    togglePlayerSelectMenu(false);
+    renderPlayerFrame();
+}
+
+function togglePlayerSelectMenu(forceState) {
+    const dropdown = document.getElementById('player-selector-dropdown');
+    const arrow = document.getElementById('player-selector-arrow');
+    if (!dropdown) return;
+
+    const isHidden = dropdown.classList.contains('hidden');
+    const shouldShow = forceState !== undefined ? forceState : isHidden;
+
+    if (shouldShow) {
+        dropdown.classList.remove('hidden');
+        dropdown.classList.add('flex');
+        if (arrow) arrow.style.transform = 'rotate(180deg)';
+    } else {
+        dropdown.classList.add('hidden');
+        dropdown.classList.remove('flex');
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
+    }
+}
+
+function scrollSlider(sliderId, direction) {
+    const slider = document.getElementById(sliderId);
+    if (!slider) return;
+    const scrollAmount = slider.clientWidth * 0.75;
+    slider.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
 }

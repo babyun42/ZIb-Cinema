@@ -71,6 +71,7 @@ button:not(:disabled):active { scale: .96; }
 @keyframes favPop { 0% { transform: scale(1); } 40% { transform: scale(1.45); } 100% { transform: scale(1); } }
 .fav-pop { display: inline-block; animation: favPop .4s ease; }
 
+/* переключатель «Создать аккаунт / Войти» */
 .pf-seg-pill { transition: transform .38s cubic-bezier(.4, 0, .2, 1); }
 #profile-guest[data-mode="login"] .pf-seg-pill { transform: translateX(100%); }
 .pf-seg-btn { color: rgb(var(--m3-secondary)); font-weight: 500; }
@@ -82,7 +83,7 @@ button:not(:disabled):active { scale: .96; }
 
 .pf-leave { opacity: 0; transform: translateX(28px); max-height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; margin: 0 !important; overflow: hidden; border-width: 0 !important; transition: all .3s ease; }
 
-/* ===== Подсветка вкладок шапки ===== */
+/* ===== Подсветка вкладок шапки при наведении ===== */
 .nav-tab-btn { position: relative; }
 .nav-tab-btn::before {
     content: '';
@@ -114,7 +115,7 @@ button:not(:disabled):active { scale: .96; }
 #popular-view.view-anim.view-enter-right, #popular-view.view-anim.view-enter-left,
 #search-view.view-anim.view-enter-right, #search-view.view-anim.view-enter-left { transform: none; }
 
-/* ===== Плавное затухание обложек по краям слайдера ===== */
+/* ===== Затухание обложек по краям слайдера ===== */
 .slider-fade {
     position: absolute;
     top: 0;
