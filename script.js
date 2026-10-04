@@ -1,3 +1,14 @@
+/* ============================================================
+   Zib Cinema — скрипт сайта
+   1) тема (Material You) — применяется сразу, чтобы не мигали цвета
+   2) основная логика: каталог, плеер, профили, избранное
+   ============================================================ */
+
+// Адрес бэкенда профилей. Оставьте пустым, если сайт и сервер работают на одном адресе
+// (node server.js). Если сайт лежит отдельно (например, на GitHub Pages), укажите адрес сервера:
+// const BACKEND_URL = 'https://ваш-сервер.example.com';
+const BACKEND_URL = '';
+
 // Material You Soft / Desaturated Color Generator
 let currentThemeMode = 'dark';
 let currentThemeColor = '#8C694D';
@@ -136,6 +147,9 @@ function applyTheme(mode, colorHex) {
     applyTheme(savedMode, savedColor);
 })();
 
+
+// ================= ОСНОВНАЯ ЛОГИКА =================
+
 const KP_API_KEY = '8c8e1a50-6322-4135-8875-5d40a5420d86';
 const API_HEADERS = { 'X-API-KEY': KP_API_KEY, 'Content-Type': 'application/json' };
 
@@ -210,6 +224,8 @@ window.onload = function() {
     });
 };
 
+
+// ===== Затухание краёв слайдеров =====
 function updateSliderFade(el) {
     const first = el.firstElementChild, last = el.lastElementChild;
     const wrap = el.parentElement;
@@ -217,12 +233,15 @@ function updateSliderFade(el) {
     const fr = wrap && wrap.querySelector('.slider-fade-r');
     if (!first || !last || !fl || !fr) return;
 
+    // Полосы строго по высоте карточек. (Отрицательные отступы слайдера «схлопываются» с контейнером,
+    // поэтому высоту контейнера использовать нельзя — полосы заезжали бы на заголовки.)
     [fl, fr].forEach(o => {
         o.style.top = first.offsetTop + 'px';
         o.style.height = first.offsetHeight + 'px';
     });
 
     const box = el.getBoundingClientRect();
+    // Затухание нужно только если крайняя карточка реально обрезана краем слайдера
     fl.classList.toggle('is-on', first.getBoundingClientRect().left < box.left - 2);
     fr.classList.toggle('is-on', last.getBoundingClientRect().right > box.right + 2);
 }
@@ -237,13 +256,15 @@ function initSliderFades() {
     window.addEventListener('resize', () => {
         document.querySelectorAll('.fade-slider').forEach(updateSliderFade);
     });
+    // после загрузки шрифтов высота карточек может измениться
     if (document.fonts && document.fonts.ready) {
         document.fonts.ready.then(() => document.querySelectorAll('.fade-slider').forEach(updateSliderFade));
     }
 }
 
+// ===== Кнопки перемотки проявляются при приближении курсора =====
 function initSliderArrows() {
-    const NEAR = 140;
+    const NEAR = 140;      // с какого расстояния (px) кнопка начинает проявляться
     const MIN_OPACITY = 0.25;
     let ticking = false, mx = 0, my = 0;
 
@@ -337,6 +358,7 @@ function updateNavIndicator(tabName) {
 
     indicator.style.opacity = '1';
 
+    // ПК: подписи не анимируются, хватает обычного CSS-перехода
     if (window.innerWidth >= 640) {
         if (navAnimFrame) { cancelAnimationFrame(navAnimFrame); navAnimFrame = null; }
         indicator.style.transition = '';
@@ -345,12 +367,14 @@ function updateNavIndicator(tabName) {
         return;
     }
 
+    // Телефон: подпись активной вкладки плавно раскрывается, а предыдущая сворачивается,
+    // поэтому плашку каждый кадр плавно подтягиваем к текущему положению активной кнопки
     const nav = activeBtn.closest('nav');
     indicator.style.transition = 'none';
 
     let curL = parseFloat(indicator.style.left) || 0;
     let curW = parseFloat(indicator.style.width) || 0;
-    if (curW === 0) {
+    if (curW === 0) { // первый показ — без анимации
         curL = activeBtn.offsetLeft;
         curW = activeBtn.offsetWidth;
     }
@@ -366,6 +390,7 @@ function updateNavIndicator(tabName) {
         indicator.style.left = curL + 'px';
         indicator.style.width = curW + 'px';
 
+        // если меню шире экрана — плавно подкручиваем его к активной вкладке
         if (nav && nav.scrollWidth > nav.clientWidth) {
             const want = tl - (nav.clientWidth - tw) / 2;
             nav.scrollLeft += (want - nav.scrollLeft) * 0.2;
@@ -398,6 +423,7 @@ function switchNavTab(tabName) {
     }
 
     updateNavIndicator(tabName);
+
 
     const fromIndex = NAV_TAB_ORDER.indexOf(currentActiveTab);
     const toIndex = NAV_TAB_ORDER.indexOf(tabName);
@@ -445,6 +471,7 @@ function switchNavTab(tabName) {
     }
 }
 
+// ===== Запоминаем место в списке, откуда открыли фильм =====
 let savedListState = null;
 
 function visibleCardById(mid) {
@@ -453,7 +480,7 @@ function visibleCardById(mid) {
 
 function saveListState(kpId) {
     const playerView = document.getElementById('player-view');
-    if (playerView && !playerView.classList.contains('hidden')) return;
+    if (playerView && !playerView.classList.contains('hidden')) return; // уже в плеере — не затираем
 
     const card = visibleCardById(kpId);
     const sliders = {};
@@ -473,6 +500,7 @@ function restoreListState() {
     if (!st || st.tab !== currentActiveTab) return;
     savedListState = null;
 
+    // горизонтальные слайдеры на главной
     Object.keys(st.sliders).forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
@@ -481,6 +509,7 @@ function restoreListState() {
         requestAnimationFrame(() => { el.style.scrollBehavior = ''; });
     });
 
+    // вертикальная позиция: ставим именно ту карточку на то же место экрана
     const apply = () => {
         let top = st.y;
         const card = visibleCardById(st.mid);
@@ -488,7 +517,7 @@ function restoreListState() {
         window.scrollTo({ top, behavior: 'instant' });
     };
     apply();
-    requestAnimationFrame(apply);
+    requestAnimationFrame(apply); // поправка, когда браузер досчитает размеры карточек
 }
 
 function showCatalogView() {
@@ -512,6 +541,11 @@ async function loadHomeData() {
     }
 }
 
+// ===== Лента «Популярное» =====
+// Сначала берём основную подборку Кинопоиска (TOP_POPULAR_ALL). У API она ограничена
+// по числу страниц, поэтому когда она заканчивается, лента продолжается
+// по годам (от нового к старому), внутри каждого года — по убыванию популярности.
+// Повторы отсеиваются, так что слотов можно открыть сколько угодно.
 const POPULAR_FIRST_YEAR = new Date().getFullYear();
 const POPULAR_LAST_YEAR = 1960;
 const POPULAR_SOURCES = [{ kind: 'collection' }];
@@ -549,12 +583,14 @@ function popularPageUrl(src, page) {
     return `${base}?order=NUM_VOTE&type=ALL&yearFrom=${src.year}&yearTo=${src.year}&page=${page}`;
 }
 
+// Собирает минимум minItems новых (не повторяющихся) фильмов
 async function fetchPopularBatch(minItems = 100) {
     const out = [];
 
     while (out.length < minItems && !popularExhausted()) {
         const src = POPULAR_SOURCES[popularSrc];
 
+        // Пока не знаем число страниц источника — берём одну, дальше пачками по 5
         let pagesToFetch = 1;
         if (popularTotalPages !== null) {
             pagesToFetch = Math.min(5, popularTotalPages - popularNextPage + 1);
@@ -588,6 +624,7 @@ async function fetchPopularBatch(minItems = 100) {
 
         popularNextPage += pagesToFetch;
 
+        // источник закончился (или вернул пустоту) — переходим к следующему
         if (popularTotalPages === null || popularNextPage > popularTotalPages || (!gotAny && results.every(d => !(d.items && d.items.length)))) {
             advancePopularSource();
         }
@@ -628,7 +665,7 @@ async function loadPopularTop100() {
 
     resetPopularState();
 
-    grid.innerHTML = `<div class="col-span-full text-center py-10"><i class="fa-solid fa-spinner fa-spin text-m3-primary text-2xl"></i><span class="ml-3 text-m3-outline text-sm block mt-2">Сбор данных...</span></div>`;
+    grid.innerHTML = `<div class="col-span-full text-center py-10"><i class="fa-solid fa-spinner fa-spin text-m3-primary text-2xl"></i><span class="ml-3 text-m3-outline text-sm block mt-2">Сбор ТОП-100...</span></div>`;
 
     try {
         const items = await fetchPopularBatch(100);
@@ -679,19 +716,21 @@ async function loadMorePopular() {
     }
 }
 
+// ================= ПРОФИЛИ, ИСТОРИЯ, ИЗБРАННОЕ =================
+// Адрес бэкенда: BACKEND_URL (вверху файла) → localStorage 'zib_api_base' → localhost:3000 при открытии файлом.
 const ZIB_API = (() => {
-    const custom = localStorage.getItem('zib_api_base');
+    const custom = localStorage.getItem('zib_api_base') || BACKEND_URL;
     if (custom) return custom.replace(/\/$/, '');
     return location.protocol === 'file:' ? 'http://localhost:3000' : '';
 })();
 
 const HISTORY_LIMIT = 20;
-const movieRegistry = new Map();
-localStorage.removeItem('zibToken');
-let authToken = localStorage.getItem('zibSession') || null;
+const movieRegistry = new Map();   // id -> краткие данные фильма (для избранного)
+localStorage.removeItem('zibToken'); // старый формат (до сеансов)
+let authToken = localStorage.getItem('zibSession') || null; // ключ текущего сеанса
 let sessionsList = [];
 let sessionsCanManage = false;
-let sessionsState = 'idle';
+let sessionsState = 'idle'; // idle | loading | error
 let authUser = null;
 let authHistory = [];
 let favorites = [];
@@ -729,8 +768,8 @@ async function apiFetch(path, { method = 'GET', body, token = authToken } = {}) 
         throw Object.assign(new Error('Сервер профилей недоступен. Проверьте, что бэкенд запущен.'), { status: 0 });
     }
     let data = {};
-    try { data = await res.json(); } catch {}
-    if (res.status === 401 && token && token === authToken) {
+    try { data = await res.json(); } catch { /* пустой ответ */ }
+    if (res.status === 401 && token && token === authToken) { // сеанс завершён на другом устройстве
         clearSession();
         showToast('Сеанс завершён. Войдите снова.');
     }
@@ -738,6 +777,7 @@ async function apiFetch(path, { method = 'GET', body, token = authToken } = {}) 
     return data;
 }
 
+// ---------- уведомления ----------
 let toastTimer = null;
 function showToast(text, action) {
     let el = document.getElementById('zib-toast');
@@ -765,9 +805,10 @@ function showToast(text, action) {
     toastTimer = setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translate(-50%, 16px)'; el.style.pointerEvents = 'none'; }, 4000);
 }
 
+// ---------- состояние аккаунта ----------
 function saveAuthCache() {
     if (!authUser) return;
-    try { localStorage.setItem('zibCache', JSON.stringify({ user: authUser, history: authHistory, favorites })); } catch {}
+    try { localStorage.setItem('zibCache', JSON.stringify({ user: authUser, history: authHistory, favorites })); } catch { /* переполнено */ }
 }
 
 function applyAccount(d) {
@@ -786,13 +827,13 @@ function applyAccount(d) {
 
 async function initAuth() {
     if (!authToken) return;
-    try {
+    try { // мгновенно показываем сохранённые данные, пока ждём сервер
         const cache = JSON.parse(localStorage.getItem('zibCache') || 'null');
         if (cache && cache.user) applyAccount(cache);
-    } catch {}
+    } catch { /* битый кэш */ }
     try {
         applyAccount(await apiFetch('/api/me'));
-    } catch (e) {}
+    } catch (e) { /* 401 обработан в apiFetch, при отсутствии сети остаёмся на кэше */ }
 }
 
 function clearSession() {
@@ -807,6 +848,7 @@ function clearSession() {
     if (currentActiveTab === 'collections') renderCollections();
 }
 
+// ---------- история просмотров ----------
 function getHistory() {
     return authUser ? authHistory : JSON.parse(localStorage.getItem('zibHistory') || '[]');
 }
@@ -854,6 +896,7 @@ function clearHistory() {
     renderHistory();
 }
 
+// ---------- избранное ----------
 function setFavIcon(btn, isFav, animate = false) {
     btn.classList.toggle('is-fav', isFav);
     const i = btn.querySelector('i');
@@ -914,7 +957,7 @@ function toggleFavorite(id) {
         ? apiFetch('/api/favorites/' + id, { method: 'DELETE' })
         : apiFetch('/api/favorites', { method: 'POST', body: { movie: movieRegistry.get(id) || { kinopoiskId: Number(id), nameRu: 'Фильм #' + id } } });
 
-    req.catch(e => {
+    req.catch(e => { // не вышло — откатываем
         favorites = snapshot;
         favIds = new Set(favorites.map(m => String(m.kinopoiskId)));
         updateFavUI(id);
@@ -924,6 +967,7 @@ function toggleFavorite(id) {
     });
 }
 
+// ---------- вкладка «Подборки» ----------
 function removeFromFavoritesGrid(id) {
     const grid = document.getElementById('favorites-grid');
     if (!grid) return;
@@ -965,6 +1009,7 @@ function renderCollections() {
     grid.innerHTML = favorites.map(m => createMovieCard(m, false)).join('');
 }
 
+// ---------- вкладка «Профиль» ----------
 function fmtDate(iso) {
     const d = new Date(iso);
     return isNaN(d) ? '' : d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -990,6 +1035,7 @@ function renderProfileView() {
     const busy = m => (profileBusy && profileMode === m) ? 'opacity-60 pointer-events-none' : '';
     const spin = m => (profileBusy && profileMode === m) ? '<i class="fa-solid fa-spinner fa-spin mr-2"></i>' : '';
 
+    // 1) только что создан аккаунт — показываем токен
     if (kind === 'fresh') {
         box.innerHTML = `<div class="${card} ${enter} space-y-5 text-center">
             <div class="w-16 h-16 rounded-full bg-m3-primaryContainer text-m3-onPrimaryContainer mx-auto flex items-center justify-center text-2xl"><i class="fa-solid fa-key"></i></div>
@@ -1004,6 +1050,7 @@ function renderProfileView() {
         return;
     }
 
+    // 2) вошли в аккаунт
     if (kind === 'account') {
         const hist = getHistory().length;
         const meta = [fmtDate(authUser.createdAt) && 'Создан ' + fmtDate(authUser.createdAt), authUser.createdOn].filter(Boolean).join(' · ');
@@ -1040,6 +1087,7 @@ function renderProfileView() {
         return;
     }
 
+    // 3) гость: создать аккаунт / войти (обе формы в DOM, переключаются анимацией)
     box.innerHTML = `<div id="profile-guest" data-mode="${profileMode}" class="${card} ${enter} space-y-6">
         <div class="text-center space-y-3">
             <div class="w-16 h-16 rounded-full bg-m3-primaryContainer text-m3-onPrimaryContainer mx-auto flex items-center justify-center text-2xl"><i class="fa-solid fa-user"></i></div>
@@ -1069,8 +1117,9 @@ function renderProfileView() {
     </div>`;
 }
 
+// ---------- копирование ----------
 async function copyText(text) {
-    try { await navigator.clipboard.writeText(text); return true; } catch {}
+    try { await navigator.clipboard.writeText(text); return true; } catch { /* нет доступа к буферу (например, http) */ }
     try {
         const ta = document.createElement('textarea');
         ta.value = text;
@@ -1094,7 +1143,7 @@ async function toggleTokenReveal() {
     try {
         tokenReveal = await fetchAccountToken();
         clearTimeout(tokenRevealTimer);
-        tokenRevealTimer = setTimeout(() => { tokenReveal = null; if (currentActiveTab === 'profile') renderProfileView(); }, 30000);
+        tokenRevealTimer = setTimeout(() => { tokenReveal = null; if (currentActiveTab === 'profile') renderProfileView(); }, 30000); // автоскрытие
         renderProfileView();
     } catch (e) { showToast(e.message); }
 }
@@ -1102,10 +1151,11 @@ async function toggleTokenReveal() {
 async function copyProfileToken() {
     try {
         const t = tokenReveal || await fetchAccountToken();
-        showToast(await copyText(t) ? 'Токен скопирован.' : 'Не удалось скопировать. Скопируйте вручную.');
+        showToast(await copyText(t) ? 'Токен скопирован.' : 'Не удалось скопировать. Нажмите на глаз и скопируйте вручную.');
     } catch (e) { showToast(e.message); }
 }
 
+// ---------- сеансы ----------
 function fmtAgo(iso) {
     const t = Date.parse(iso);
     if (!t) return '';
@@ -1115,322 +1165,378 @@ function fmtAgo(iso) {
     const h = Math.floor(m / 60);
     if (h < 24) return h + ' ч. назад';
     const d = Math.floor(h / 24);
-    return d + ' дн. назад';
+    if (d < 7) return d + ' дн. назад';
+    return fmtDate(iso);
+}
+
+function osIcon(os) {
+    return ({ Windows: 'fa-brands fa-windows', macOS: 'fa-brands fa-apple', iOS: 'fa-brands fa-apple', Android: 'fa-brands fa-android', Linux: 'fa-brands fa-linux', ChromeOS: 'fa-brands fa-chrome' })[os] || 'fa-solid fa-globe';
 }
 
 function renderSessionsBlock() {
-    if (!sessionsCanManage) return '';
-    if (sessionsState === 'loading') {
-        return `<div class="space-y-2"><div class="text-xs font-bold text-m3-outline uppercase tracking-wider">Активные сеансы</div><div class="text-xs text-m3-outline p-3 text-center bg-m3-surfaceContainerLow rounded-2xl border border-m3-outlineVariant/20"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Загрузка сеансов...</div></div>`;
+    let body;
+    if (sessionsState === 'loading' && !sessionsList.length) {
+        body = '<div class="text-center py-6 text-m3-outline text-sm"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Загрузка сеансов…</div>';
+    } else if (sessionsState === 'error') {
+        body = '<div class="text-center py-4 text-sm text-red-400">Не удалось загрузить сеансы.</div>';
+    } else {
+        body = sessionsList.map(s => {
+            const badges = [
+                s.current ? '<span class="px-2 py-0.5 rounded-full bg-m3-primaryContainer text-m3-onPrimaryContainer text-[10px] font-bold">Это устройство</span>' : '',
+                s.main ? '<span class="px-2 py-0.5 rounded-full bg-m3-primary text-m3-onPrimary text-[10px] font-bold"><i class="fa-solid fa-shield-halved mr-1"></i>Главная</span>' : ''
+            ].join('');
+            const canDelete = sessionsCanManage && !s.current && !s.main;
+            return `<div data-session="${esc(s.id)}" class="flex items-center gap-3 p-3 rounded-2xl bg-m3-surfaceContainerLow border border-m3-outlineVariant/20">
+                <div class="w-11 h-11 shrink-0 rounded-2xl bg-m3-primaryContainer text-m3-onPrimaryContainer flex items-center justify-center text-lg"><i class="${osIcon(s.os)}"></i></div>
+                <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span class="text-sm font-bold text-m3-onSurface">${esc(s.os)} · ${esc(s.browser)}</span>${badges}
+                    </div>
+                    <div class="text-[11px] text-m3-outline mt-0.5">${s.current ? 'Активен сейчас' : 'Активность: ' + esc(fmtAgo(s.lastSeen))} · вход ${esc(fmtDate(s.createdAt))} · IP ${esc(s.ipMask)}</div>
+                </div>
+                ${canDelete ? `<button onclick="deleteSession('${esc(s.id)}', this)" title="Завершить сеанс" class="w-10 h-10 shrink-0 rounded-full bg-m3-surfaceContainerHigh hover:bg-red-500/20 text-red-300 transition-colors cursor-pointer"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+            </div>`;
+        }).join('');
     }
-    if (sessionsState === 'error') {
-        return `<div class="space-y-2"><div class="text-xs font-bold text-m3-outline uppercase tracking-wider">Активные сеансы</div><div class="text-xs text-red-400 p-3 text-center bg-m3-surfaceContainerLow rounded-2xl border border-m3-outlineVariant/20">Не удалось загрузить список сеансов. <button onclick="loadSessions()" class="underline font-bold">Повторить</button></div></div>`;
-    }
-    if (!sessionsList.length) return '';
 
-    const items = sessionsList.map(s => {
-        const current = s.current ? '<span class="text-[10px] bg-m3-primaryContainer text-m3-onPrimaryContainer px-2 py-0.5 rounded-full font-bold ml-2">Текущий</span>' : '';
-        const title = esc(s.device || s.userAgent || 'Устройство');
-        const time = s.lastActiveAt ? fmtAgo(s.lastActiveAt) : '';
-        const btn = s.current ? '' : `<button onclick="revokeSession('${s.id}')" title="Завершить" class="text-xs text-red-400 hover:text-red-300 p-2 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>`;
-        return `<div class="flex items-center justify-between p-3 rounded-2xl bg-m3-surfaceContainerLow border border-m3-outlineVariant/20 text-xs">
-            <div>
-                <div class="font-bold text-m3-onSurface flex items-center">${title}${current}</div>
-                <div class="text-m3-outline mt-0.5">${time}</div>
-            </div>
-            ${btn}
-        </div>`;
-    }).join('');
+    const others = sessionsList.filter(s => !s.current).length;
+    const killAll = sessionsCanManage && others > 0
+        ? `<button onclick="deleteOtherSessions()" class="w-full px-4 py-2.5 rounded-full bg-m3-surfaceContainerHigh hover:bg-red-500/20 text-red-300 text-xs font-bold border border-m3-outlineVariant/40 transition-colors cursor-pointer">Завершить все остальные сеансы</button>` : '';
+    const hint = sessionsList.length && !sessionsCanManage
+        ? '<p class="text-[11px] text-m3-outline">Завершать чужие сеансы может только главный — тот, с которого был первый вход.</p>' : '';
 
-    return `<div class="space-y-2">
-        <div class="text-xs font-bold text-m3-outline uppercase tracking-wider">Активные сеансы</div>
-        <div class="space-y-2">${items}</div>
+    return `<div class="space-y-3">
+        <div class="flex items-center justify-between">
+            <div class="text-xs font-bold text-m3-outline uppercase tracking-wider">Сеансы</div>
+            <span class="text-xs text-m3-outline">${sessionsList.length || ''}</span>
+        </div>
+        <div class="space-y-2">${body}</div>
+        ${killAll}${hint}
     </div>`;
 }
 
 async function loadSessions() {
-    if (!authUser || freshToken) return;
+    if (!authUser) return;
     sessionsState = 'loading';
-    if (currentActiveTab === 'profile') renderProfileView();
     try {
-        const res = await apiFetch('/api/sessions');
-        sessionsList = res.sessions || [];
-        sessionsCanManage = true;
+        const data = await apiFetch('/api/sessions');
+        sessionsList = data.sessions || [];
+        sessionsCanManage = !!data.canManage;
         sessionsState = 'idle';
     } catch (e) {
-        sessionsCanManage = false;
-        sessionsState = 'error';
+        if (e.status === 0 && sessionsList.length) sessionsState = 'idle'; else sessionsState = 'error';
     }
-    if (currentActiveTab === 'profile') renderProfileView();
+    if (currentActiveTab === 'profile' && !freshToken) renderProfileView();
 }
 
-async function revokeSession(sessionId) {
+async function deleteSession(id, btn) {
+    if (!confirm('Завершить этот сеанс? Устройство будет разлогинено.')) return;
     try {
-        await apiFetch('/api/sessions/' + sessionId, { method: 'DELETE' });
-        sessionsList = sessionsList.filter(s => s.id !== sessionId);
-        showToast('Сеанс завершён');
-        renderProfileView();
-    } catch (e) {
-        showToast('Не удалось завершить сеанс: ' + e.message);
-    }
+        await apiFetch('/api/sessions/' + id, { method: 'DELETE' });
+        const row = btn && btn.closest('[data-session]');
+        if (row) { // плавно «схлопываем» строку
+            row.style.maxHeight = row.offsetHeight + 'px';
+            void row.offsetWidth;
+            row.classList.add('pf-leave');
+            await new Promise(r => setTimeout(r, 300));
+        }
+        showToast('Сеанс завершён.');
+    } catch (e) { showToast(e.message); }
+    loadSessions();
+}
+
+async function deleteOtherSessions() {
+    if (!confirm('Завершить все сеансы, кроме этого устройства?')) return;
+    try {
+        await apiFetch('/api/sessions', { method: 'DELETE' });
+        showToast('Остальные сеансы завершены.');
+    } catch (e) { showToast(e.message); }
+    loadSessions();
+}
+
+// если сеанс завершили на другом устройстве — узнаем, когда вкладка снова станет активной
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && authToken) apiFetch('/api/me').catch(() => {});
+});
+
+function setProfileMode(mode) {
+    if (profileMode === mode) return;
+    profileMode = mode;
+    profileError = '';
+    const root = document.getElementById('profile-guest');
+    if (root) { // меняем на месте, чтобы сработала анимация
+        root.dataset.mode = mode;
+        root.querySelectorAll('.pf-error').forEach(e => e.remove());
+    } else renderProfileView();
+}
+
+function clientInfo() {
+    return {
+        platform: (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '',
+        lang: navigator.language || '',
+        tz: (Intl.DateTimeFormat().resolvedOptions().timeZone) || '',
+        screen: screen.width + 'x' + screen.height
+    };
 }
 
 async function profileCreate() {
-    const nickname = profileNickname.trim();
-    if (!nickname) {
-        profileError = 'Введите никнейм';
-        renderProfileView();
-        return;
-    }
-    profileError = '';
-    profileBusy = true;
-    renderProfileView();
+    const nickname = (document.getElementById('profile-nickname').value || '').trim();
+    profileNickname = nickname;
+    if (nickname.length < 2) { profileError = 'Ник должен быть от 2 до 24 символов.'; return renderProfileView(); }
+    profileBusy = true; profileError = ''; renderProfileView();
     try {
-        const history = getHistory();
-        const res = await apiFetch('/api/register', {
-            method: 'POST',
-            body: { nickname, history }
-        });
-        authToken = res.sessionToken || res.token;
-        freshToken = res.accountToken || res.token;
+        const guestHistory = getHistory().map(slimMovie).filter(Boolean);
+        const data = await apiFetch('/api/register', { method: 'POST', token: null, body: { nickname, history: guestHistory, client: clientInfo() } });
+        authToken = data.sessionKey;
         localStorage.setItem('zibSession', authToken);
-        applyAccount(res);
+        freshToken = data.token; profileNickname = '';
         profileBusy = false;
-        renderProfileView();
+        applyAccount(data);
     } catch (e) {
-        profileError = e.message;
-        profileBusy = false;
-        renderProfileView();
+        profileBusy = false; profileError = e.message; renderProfileView();
     }
 }
 
 async function profileLogin() {
-    const token = profileTokenInput.trim();
-    if (!token) {
-        profileError = 'Введите токен';
-        renderProfileView();
-        return;
-    }
-    profileError = '';
-    profileBusy = true;
-    renderProfileView();
+    const token = (document.getElementById('profile-token').value || '').trim();
+    profileTokenInput = token;
+    if (!token) { profileError = 'Вставьте токен.'; return renderProfileView(); }
+    profileBusy = true; profileError = ''; renderProfileView();
     try {
-        const res = await apiFetch('/api/login', {
-            method: 'POST',
-            body: { token }
-        });
-        authToken = res.sessionToken || res.token;
-        freshToken = null;
+        const data = await apiFetch('/api/login', { method: 'POST', token: null, body: { token } });
+        authToken = data.sessionKey;
         localStorage.setItem('zibSession', authToken);
-        applyAccount(res);
-        profileBusy = false;
-        renderProfileView();
+        profileBusy = false; profileTokenInput = '';
+        applyAccount(data);
+        loadSessions();
+        showToast('Добро пожаловать, ' + data.user.nickname + '!');
     } catch (e) {
-        profileError = e.message;
-        profileBusy = false;
-        renderProfileView();
+        profileBusy = false; profileError = e.message; renderProfileView();
     }
 }
 
 async function profileLogout() {
-    if (authToken) {
-        try {
-            await apiFetch('/api/logout', { method: 'POST' });
-        } catch (e) {}
-    }
+    if (sessionsList.length <= 1 && !confirm('Это ваш единственный сеанс. Если выйти, аккаунт будет удалён вместе с историей и избранным, так как не останется ни одного сеанса. Продолжить?')) return;
+    let deleted = false;
+    try { deleted = !!(await apiFetch('/api/logout', { method: 'POST' })).accountDeleted; } catch { /* сеанс и так недействителен */ }
     clearSession();
-    showToast('Вы вышли из аккаунта');
+    profileMode = 'login';
+    renderProfileView();
+    showToast(deleted ? 'Аккаунт удалён: не осталось ни одного сеанса.' : 'Вы вышли из аккаунта.');
 }
+
+function finishFreshToken() { freshToken = null; renderProfileView(); loadSessions(); }
 
 async function copyToken() {
-    if (freshToken) {
-        const ok = await copyText(freshToken);
-        showToast(ok ? 'Токен скопирован в буфер обмена.' : 'Не удалось скопировать.');
+    if (!freshToken) return;
+    showToast(await copyText(freshToken) ? 'Токен скопирован.' : 'Не удалось скопировать. Выделите токен и скопируйте вручную.');
+}
+
+function scrollSlider(sliderId, direction) {
+    const slider = document.getElementById(sliderId);
+    if (slider) {
+        const scrollAmount = slider.clientWidth * 0.70;
+        slider.scrollBy({ left: scrollAmount * direction, behavior: 'smooth' });
     }
-}
-
-function finishFreshToken() {
-    freshToken = null;
-    renderProfileView();
-}
-
-function setProfileMode(mode) {
-    profileMode = mode;
-    profileError = '';
-    const el = document.getElementById('profile-guest');
-    if (el) el.setAttribute('data-mode', mode);
-    else renderProfileView();
 }
 
 function handleLiveSearch(query) {
-    clearTimeout(searchDebounceTimer);
+    query = query.trim();
     const container = document.getElementById('suggestions-container');
-    const dropdown = document.getElementById('search-suggestions');
+    const icon = document.getElementById('search-btn-icon');
 
-    if (!query.trim()) {
-        container.innerHTML = `<div class="text-xs text-m3-outline p-3 text-center">Начните вводить название...</div>`;
+    if (!query) {
+        container.innerHTML = '<div class="text-xs text-m3-outline p-3 text-center">Начните вводить название...</div>';
         return;
     }
 
-    searchDebounceTimer = setTimeout(async () => {
-        container.innerHTML = `<div class="text-xs text-m3-outline p-3 text-center"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Поиск...</div>`;
-        dropdown.classList.remove('hidden');
+    icon.className = 'fa-solid fa-spinner fa-spin';
 
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(async () => {
         try {
+            if (/^\d+$/.test(query)) {
+                container.innerHTML = `
+                    <button onclick="openMoviePlayer('${query}')" class="w-full text-left p-3 hover:bg-m3-surfaceContainerHighest transition-colors flex items-center gap-3 rounded-xl animate-fade-in-down cursor-pointer">
+                        <div class="w-10 h-10 rounded bg-m3-primaryContainer text-m3-onPrimaryContainer flex items-center justify-center shrink-0"><i class="fa-solid fa-hashtag"></i></div>
+                        <div>
+                            <div class="text-sm font-bold text-m3-onSurface">Открыть по ID: ${query}</div>
+                            <div class="text-[10px] text-m3-outline">Прямой переход к плееру</div>
+                        </div>
+                    </button>
+                `;
+                return;
+            }
+
             const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword?keyword=${encodeURIComponent(query)}&page=1`, { headers: API_HEADERS });
+            if (!res.ok) throw new Error('Search failed');
             const data = await res.json();
 
             if (data.films && data.films.length > 0) {
-                container.innerHTML = data.films.slice(0, 6).map(movie => {
-                    const mId = movie.filmId || movie.kinopoiskId;
-                    const name = esc(movie.nameRu || movie.nameEn || 'Без названия');
-                    const year = movie.year || '';
-                    const rating = movie.rating || '—';
-                    return `<div onclick="openMoviePlayer('${mId}')" class="flex items-center gap-3 p-2 hover:bg-m3-surfaceContainerHighest rounded-xl cursor-pointer transition-colors">
-                        <img src="https://st.kp.yandex.net/images/film_big/${mId}.jpg" onerror="this.onerror=null; this.src='${fallbackPoster}';" class="w-10 h-14 object-cover rounded-lg bg-m3-surfaceContainerLowest">
-                        <div class="min-w-0 flex-1">
-                            <div class="text-xs font-bold text-m3-onSurface truncate">${name}</div>
-                            <div class="text-[10px] text-m3-outline flex items-center gap-2 mt-0.5">
-                                <span>${year}</span>
-                                <span class="text-amber-300 font-bold">★ ${rating}</span>
+                const topResults = data.films.slice(0, 5);
+                container.innerHTML = topResults.map((film, index) => {
+                    const name = film.nameRu || film.nameEn || 'Неизвестно';
+                    const year = film.year || '';
+                    const rating = film.rating ? `<span class="text-amber-300 font-bold px-1 rounded bg-amber-400/10">★ ${film.rating}</span>` : '';
+
+                    return `
+                        <button onclick="openMoviePlayer('${film.filmId}')" class="w-full text-left p-2 hover:bg-m3-surfaceContainerHighest transition-colors flex items-center gap-3 rounded-xl animate-fade-in-down cursor-pointer" style="animation-delay: ${index * 50}ms">
+                            <img src="${film.posterUrlPreview || film.posterUrl}" class="w-10 h-14 object-cover rounded bg-m3-surfaceContainerLowest" referrerpolicy="no-referrer" onerror="this.src='${fallbackPoster}'">
+                            <div class="flex-grow min-w-0">
+                                <div class="text-xs sm:text-sm font-bold text-m3-onSurface truncate">${name}</div>
+                                <div class="text-[10px] text-m3-outline flex items-center gap-2 mt-0.5">
+                                    <span>${year}</span> ${rating}
+                                </div>
                             </div>
-                        </div>
-                    </div>`;
+                        </button>
+                    `;
                 }).join('');
             } else {
-                container.innerHTML = `<div class="text-xs text-m3-outline p-3 text-center">Ничего не найдено</div>`;
+                container.innerHTML = '<div class="text-xs text-m3-outline p-3 text-center">Ничего не найдено</div>';
             }
-        } catch (e) {
-            container.innerHTML = `<div class="text-xs text-m3-outline p-3 text-center">Ошибка поиска</div>`;
+        } catch (err) {
+            console.error('Search API error:', err);
+            container.innerHTML = '<div class="text-xs text-red-400 p-3 text-center">Ошибка сети.</div>';
+        } finally {
+            icon.className = 'fa-solid fa-arrow-right';
         }
-    }, 300);
+    }, 500);
 }
 
 async function executeDirectSearch() {
-    const input = document.getElementById('search-input');
-    const query = input ? input.value.trim() : '';
-    if (!query) return;
-
+    const query = document.getElementById('search-input').value.trim();
     document.getElementById('search-suggestions').classList.add('hidden');
-    document.getElementById('search-query-label').textContent = query;
+
+    if (!query) return;
 
     if (/^\d+$/.test(query)) {
         openMoviePlayer(query);
         return;
     }
 
+    const searchNavBtn = document.getElementById('nav-btn-search');
+    if (searchNavBtn) {
+        searchNavBtn.classList.remove('hidden');
+        searchNavBtn.classList.add('flex');
+    }
+
     switchNavTab('search');
+
+    document.getElementById('search-query-label').innerText = query;
     const grid = document.getElementById('search-grid-container');
     const countLabel = document.getElementById('search-results-count');
-    grid.innerHTML = `<div class="col-span-full text-center py-10"><i class="fa-solid fa-spinner fa-spin text-m3-primary text-2xl"></i><span class="ml-3 text-m3-outline text-sm block mt-2">Поиск результатов...</span></div>`;
+
+    grid.innerHTML = `<div class="col-span-full text-center py-10"><i class="fa-solid fa-spinner fa-spin text-m3-primary text-2xl"></i><span class="ml-3 text-m3-outline text-sm block mt-2">Поиск по запросу «${query}»...</span></div>`;
+    countLabel.innerText = 'Поиск...';
 
     try {
         const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword?keyword=${encodeURIComponent(query)}&page=1`, { headers: API_HEADERS });
+        if (!res.ok) throw new Error('Search failed');
         const data = await res.json();
 
         if (data.films && data.films.length > 0) {
-            countLabel.textContent = `Найдено: ${data.films.length}`;
             grid.innerHTML = data.films.map(movie => createMovieCard(movie, false)).join('');
+            countLabel.innerText = `Найдено: ${data.films.length}`;
         } else {
-            countLabel.textContent = 'Найдено: 0';
-            grid.innerHTML = `<div class="col-span-full text-center py-10 text-m3-outline text-sm">По вашему запросу ничего не найдено.</div>`;
+            grid.innerHTML = `<div class="col-span-full text-center py-12 text-m3-outline text-sm"><i class="fa-solid fa-magnifying-glass text-3xl mb-3 block"></i>По запросу «${query}» ничего не найдено.</div>`;
+            countLabel.innerText = '0 результатов';
         }
-    } catch (e) {
-        countLabel.textContent = 'Ошибка';
-        grid.innerHTML = `<div class="col-span-full text-center py-10 text-m3-outline text-sm">Не удалось загрузить результаты поиска.</div>`;
+    } catch (err) {
+        console.error('Search error:', err);
+        grid.innerHTML = `<div class="col-span-full text-center py-10 text-red-400 text-sm">Ошибка при загрузке результатов поиска.</div>`;
+        countLabel.innerText = 'Ошибка';
     }
 }
 
-async function openMoviePlayer(id) {
-    saveListState(id);
-    activeMovieId = String(id);
-    document.getElementById('current-player-kp-id').textContent = activeMovieId;
+async function openMoviePlayer(kpId) {
+    saveListState(kpId);
+    document.getElementById('search-suggestions').classList.add('hidden');
+    document.getElementById('search-input').value = '';
+
+    const homeView = document.getElementById('home-view');
+    const popularView = document.getElementById('popular-view');
+    const searchView = document.getElementById('search-view');
+    const genericView = document.getElementById('generic-view');
+    const playerView = document.getElementById('player-view');
+
+    if(homeView) hideMainView(homeView);
+    if(popularView) hideMainView(popularView);
+    if(searchView) hideMainView(searchView);
+    if(genericView) hideMainView(genericView);
+    hideMainView(document.getElementById('profile-view'));
+    hideMainView(document.getElementById('collections-view'));
+    showMainView(playerView, 'right');
+
+    document.getElementById('current-player-kp-id').innerText = kpId;
+    document.getElementById('player-movie-title').innerText = 'Загрузка информации...';
+    document.getElementById('player-movie-description').innerText = '';
+    document.getElementById('player-movie-meta').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-m3-primary"></i>';
+    document.getElementById('meta-bg-blur').style.backgroundImage = 'none';
+
+    activeMovieId = kpId;
+    activeMovieType = 'FILM';
     updatePlayerFavBtn();
 
-    switchNavTab('player');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    renderPlayerFrame();
+    const wrapper = document.getElementById('player-wrapper');
+    if (wrapper) {
+        wrapper.innerHTML = `
+            <div class="absolute inset-0 flex flex-col items-center justify-center text-m3-outline gap-3 bg-black">
+                <i class="fa-solid fa-circle-notch fa-spin text-3xl"></i>
+                <span class="text-xs">Подключение медиа...</span>
+            </div>
+        `;
+    }
 
     try {
-        const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.2/films/${id}`, { headers: API_HEADERS });
-        if (!res.ok) throw new Error('Ошибка сети');
-        const movie = await res.json();
+        const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.2/films/${kpId}`, { headers: API_HEADERS });
+        if (res.ok) {
+            const film = await res.json();
 
-        activeMovieType = movie.type || 'FILM';
-        addToHistory(movie);
+            activeMovieType = film.type || 'FILM';
+            setPlayerMode(currentMode);
 
-        const title = movie.nameRu || movie.nameOriginal || movie.nameEn || 'Без названия';
-        const year = movie.year || '';
-        const rating = movie.ratingKinopoisk || movie.ratingImdb || '—';
-        const genres = (movie.genres || []).map(g => g.genre).join(', ');
-        const countries = (movie.countries || []).map(c => c.country).join(', ');
-        const desc = movie.description || 'Описание отсутствует.';
+            const name = film.nameRu || film.nameOriginal || `Фильм #${kpId}`;
+            const year = film.year || 'Н/Д';
+            const rating = film.ratingKinopoisk || film.ratingImdb || '—';
+            const length = film.filmLength ? `${film.filmLength} мин.` : '';
+            const genres = film.genres ? film.genres.map(g => g.genre).slice(0, 3).join(', ') : '';
 
-        document.getElementById('player-movie-title').textContent = title;
-        document.getElementById('player-movie-description').textContent = desc;
-        document.getElementById('player-movie-meta').innerHTML = `
-            <span class="bg-m3-primaryContainer text-m3-onPrimaryContainer px-2.5 py-1 rounded-full font-bold">★ ${rating}</span>
-            <span>${year}</span>
-            ${countries ? `<span>• ${countries}</span>` : ''}
-            ${genres ? `<span>• ${genres}</span>` : ''}
-        `;
+            document.getElementById('player-movie-title').innerText = name;
+            document.getElementById('player-movie-description').innerText = film.description || film.shortDescription || 'Описание отсутствует.';
 
-        const blurBg = document.getElementById('meta-bg-blur');
-        if (blurBg) blurBg.style.backgroundImage = `url('https://st.kp.yandex.net/images/film_big/${id}.jpg')`;
+            document.getElementById('player-movie-meta').innerHTML = `
+                <span class="px-2 py-1 rounded bg-m3-surfaceContainerLow border border-m3-outlineVariant/30">${year}</span>
+                ${genres ? `<span class="px-2 py-1 rounded bg-m3-surfaceContainerLow border border-m3-outlineVariant/30">${genres}</span>` : ''}
+                ${length ? `<span class="px-2 py-1 rounded bg-m3-surfaceContainerLow border border-m3-outlineVariant/30"><i class="fa-regular fa-clock"></i> ${length}</span>` : ''}
+                <span class="px-2 py-1 rounded bg-amber-500/10 text-amber-300 font-bold border border-amber-500/20">★ ${rating}</span>
+            `;
 
-    } catch (e) {
-        document.getElementById('player-movie-title').textContent = 'Фильм ID: ' + id;
-        document.getElementById('player-movie-description').textContent = 'Информация временно недоступна.';
+            document.getElementById('meta-bg-blur').style.backgroundImage = `url('https://st.kp.yandex.net/images/film_big/${kpId}.jpg')`;
+
+            const slimFilm = slimMovie(film);
+            if (slimFilm) { movieRegistry.set(String(kpId), slimFilm); }
+            addToHistory(film);
+        }
+    } catch (err) {
+        console.error("Failed to load details:", err);
+        document.getElementById('player-movie-title').innerText = `Просмотр (ID: ${kpId})`;
+        document.getElementById('player-movie-meta').innerHTML = '<span class="text-red-400 text-xs">Данные не загружены</span>';
+
+        setPlayerMode(currentMode);
+        addToHistory({ kinopoiskId: kpId, nameRu: `Фильм #${kpId}` });
     }
 }
 
-function renderPlayerFrame() {
-    const wrapper = document.getElementById('player-wrapper');
-    if (!wrapper || !activeMovieId) return;
-
-    let url = '';
-    if (currentMode === 'external_sspoisk') {
-        url = `https://sspoisk.ru/film/${activeMovieId}/`;
-    } else if (currentMode === 'external_kinobox') {
-        url = `https://kinobox.in/kinopoisk/${activeMovieId}`;
-    } else if (currentMode === 'external_gokino') {
-        url = `https://gokino.online/kinopoisk/${activeMovieId}`;
-    }
-
-    wrapper.innerHTML = `<iframe src="${url}" class="w-full h-full border-0 rounded-2xl" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe>`;
-}
-
-function setPlayerMode(mode) {
-    currentMode = mode;
-    const badgeMap = {
-        'external_sspoisk': 'SSpoisk',
-        'external_kinobox': 'Kinobox',
-        'external_gokino': 'Gokino'
-    };
-    document.getElementById('active-player-name-badge').textContent = badgeMap[mode] || 'SSpoisk';
-
-    document.querySelectorAll('#player-selector-dropdown .tab-btn').forEach(btn => {
-        const isCurrent = btn.id === 'btn-mode-' + mode;
-        const check = btn.querySelector('.check-icon');
-        if (check) check.classList.toggle('hidden', !isCurrent);
-    });
-
-    togglePlayerSelectMenu(false);
-    renderPlayerFrame();
-}
-
-function togglePlayerSelectMenu(forceState) {
+function togglePlayerSelectMenu() {
     const dropdown = document.getElementById('player-selector-dropdown');
     const arrow = document.getElementById('player-selector-arrow');
-    if (!dropdown) return;
 
-    const isHidden = dropdown.classList.contains('hidden');
-    const shouldShow = forceState !== undefined ? forceState : isHidden;
-
-    if (shouldShow) {
+    if (dropdown.classList.contains('hidden')) {
         dropdown.classList.remove('hidden');
         dropdown.classList.add('flex');
+        dropdown.classList.remove('animate-fade-in-down');
+        void dropdown.offsetWidth;
+        dropdown.classList.add('animate-fade-in-down');
         if (arrow) arrow.style.transform = 'rotate(180deg)';
     } else {
         dropdown.classList.add('hidden');
@@ -1439,9 +1545,56 @@ function togglePlayerSelectMenu(forceState) {
     }
 }
 
-function scrollSlider(sliderId, direction) {
-    const slider = document.getElementById(sliderId);
-    if (!slider) return;
-    const scrollAmount = slider.clientWidth * 0.75;
-    slider.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
+function setPlayerMode(mode) {
+    currentMode = mode;
+    if (!activeMovieId) return;
+
+    const dropdown = document.getElementById('player-selector-dropdown');
+    const arrow = document.getElementById('player-selector-arrow');
+    if (dropdown) { dropdown.classList.add('hidden'); dropdown.classList.remove('flex'); }
+    if (arrow) arrow.style.transform = 'rotate(0deg)';
+
+    const namesMap = {
+        'external_sspoisk': 'SSpoisk',
+        'external_kinobox': 'Kinobox',
+        'external_gokino' : 'Gokino'
+    };
+    document.getElementById('active-player-name-badge').innerText = namesMap[mode] || 'Плеер';
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-m3-primaryContainer', 'text-m3-onPrimaryContainer');
+        const check = btn.querySelector('.check-icon');
+        if (check) check.classList.add('hidden');
+    });
+    const activeBtn = document.getElementById('btn-mode-' + mode);
+    if (activeBtn) {
+        activeBtn.classList.add('bg-m3-primaryContainer', 'text-m3-onPrimaryContainer');
+        const check = activeBtn.querySelector('.check-icon');
+        if (check) check.classList.remove('hidden');
+    }
+
+    const wrapper = document.getElementById('player-wrapper');
+    let iframeSrc = '';
+
+    if (mode === 'external_kinobox') {
+        iframeSrc = `https://on.kinohub.vip/movie/${activeMovieId}`;
+    } else if (mode === 'external_sspoisk') {
+        const isSeries = ['TV_SERIES', 'MINI_SERIES', 'TV_SHOW'].includes(activeMovieType);
+        const route = isSeries ? 'series' : 'film';
+        iframeSrc = `https://bulkikim.sbs/${route}/${activeMovieId}/`;
+    } else if (mode === 'external_gokino') {
+        iframeSrc = `https://matrix.gokino.by/search.php?q=${activeMovieId}`;
+    }
+
+    if (wrapper) {
+        wrapper.innerHTML = `
+            <iframe src="${iframeSrc}"
+                    id="active-player-iframe"
+                    allowfullscreen
+                    allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                    referrerpolicy="origin"
+                    class="w-full h-full border-0 absolute inset-0 z-10 bg-black">
+            </iframe>
+        `;
+    }
 }

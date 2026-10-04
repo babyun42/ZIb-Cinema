@@ -47,9 +47,10 @@
     <!-- FontAwesome & Hls.js CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="script.js"></script>
 
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
+
 </head>
 <body class="min-h-screen flex flex-col font-sans antialiased overflow-x-hidden">
 
@@ -134,7 +135,7 @@
                     <h2 class="text-xl font-bold text-m3-onSurface tracking-wide flex items-center gap-2">
                         <i class="fa-solid fa-fire text-m3-primary"></i> Популярное сейчас
                     </h2>
-                    <button onclick="switchNavTab('popular')" class="text-xs text-m3-primary hover:text-m3-onSurface transition-colors">Смотреть популярные<i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></button>
+                    <button onclick="switchNavTab('popular')" class="text-xs text-m3-primary hover:text-m3-onSurface transition-colors">Смотреть популяные<i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></button>
                 </div>
                 <div class="relative group/slider">
                     <div class="slider-fade slider-fade-l"></div><div class="slider-fade slider-fade-r"></div>
@@ -386,6 +387,5 @@
     </footer>
 
     <!-- JavaScript Application Logic -->
-    <script src="script.js" defer></script>
 </body>
 </html>

@@ -55,6 +55,7 @@ body::selection, body *::selection {
 }
 
 /* ===== Анимации интерфейса ===== */
+/* плавные переходы и «нажатие» для всех кнопок (кроме стрелок слайдера и сердечек, у них свои) */
 button:not(.slider-arrow):not(.fav-btn) {
     transition: color .2s ease, background-color .2s ease, border-color .2s ease, box-shadow .2s ease,
                 opacity .2s ease, transform .2s ease, scale .15s ease !important;
@@ -62,6 +63,7 @@ button:not(.slider-arrow):not(.fav-btn) {
 button:not(:disabled):active { scale: .96; }
 .slider-arrow:active { scale: .9; }
 
+/* карточки фильмов: лёгкий подъём при наведении и «нажатие» */
 @media (hover: hover) { [data-mid]:hover { transform: translateY(-3px); } }
 [data-mid]:active { transform: scale(.98); }
 
@@ -83,7 +85,7 @@ button:not(:disabled):active { scale: .96; }
 
 .pf-leave { opacity: 0; transform: translateX(28px); max-height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; margin: 0 !important; overflow: hidden; border-width: 0 !important; transition: all .3s ease; }
 
-/* ===== Подсветка вкладок шапки при наведении ===== */
+/* ===== Подсветка вкладок шапки при наведении (Material 3 state layer) ===== */
 .nav-tab-btn { position: relative; }
 .nav-tab-btn::before {
     content: '';
@@ -106,19 +108,23 @@ button:not(:disabled):active { scale: .96; }
 .fav-btn:active { transform: scale(.85); }
 @media (hover: none) { .fav-btn { opacity: 1; } }
 
-/* ===== Оптимизация длинных сеток ===== */
+/* ===== Оптимизация длинных сеток (Популярное / Поиск) ===== */
+/* Браузер не рисует и не считает вёрстку карточек, которых сейчас не видно на экране */
 .grid-card {
     content-visibility: auto;
-    contain-intrinsic-block-size: auto 340px;
+    contain-intrinsic-block-size: auto 340px; /* примерная высота до первого показа, потом запоминается реальная */
 }
+/* Огромный список не двигаем transform'ом (это создаёт гигантский слой) — только плавное появление */
 #popular-view.view-anim, #search-view.view-anim { transition-property: opacity; }
 #popular-view.view-anim.view-enter-right, #popular-view.view-anim.view-enter-left,
 #search-view.view-anim.view-enter-right, #search-view.view-anim.view-enter-left { transform: none; }
 
-/* ===== Затухание обложек по краям слайдера ===== */
+/* ===== Плавное затухание обложек по краям слайдера ===== */
+/* Раньше затухание делалось маской на самом слайдере — вместе с hover-эффектами и размытием оно
+   мигало. Теперь это обычные градиенты поверх краёв, только с анимацией opacity. */
 .slider-fade {
     position: absolute;
-    top: 0;
+    top: 0;      /* точные top и height выставляет JS (updateSliderFade) по реальным карточкам */
     height: 100%;
     width: 4rem;
     z-index: 5;
@@ -136,13 +142,13 @@ button:not(:disabled):active { scale: .96; }
     background: linear-gradient(to left, rgb(var(--m3-surface)) 0%, rgb(var(--m3-surface) / .65) 45%, rgb(var(--m3-surface) / 0) 100%);
 }
 
-/* ===== Кнопки перемотки ===== */
+/* ===== Кнопки перемотки: полупрозрачные, проявляются при приближении мыши ===== */
 .slider-arrow {
     opacity: 0.25;
     transition: opacity .15s ease-out, background-color .3s ease, color .3s ease;
 }
 
-/* ===== Мобильная шапка ===== */
+/* ===== Мобильная шапка: название активной вкладки (плавное появление) ===== */
 .nav-label {
     display: inline-block;
     max-width: 0;
