@@ -1,4 +1,4 @@
-const BACKEND_URL = 'https://backend.zib-cinema.netcraze.link:65083';
+const BACKEND_URL = 'https://zib-cinema.xyz';
 
 // Material You Soft / Desaturated Color Generator
 let currentThemeMode = 'dark';
