@@ -4,9 +4,9 @@
    2) основная логика: каталог, плеер, профили, избранное
    ============================================================ */
 
-// Адрес бэкенда профилей. Оставьте пустым, если сайт и сервер работают на одном адресе
-// (node server.js). Если сайт лежит отдельно (например, на GitHub Pages), укажите адрес сервера:
-// const BACKEND_URL = 'https://ваш-сервер.example.com';
+// Адрес бэкенда профилей (сервер на VPS). Обязательно с https:// — GitHub Pages работает по HTTPS,
+// а браузер блокирует запросы с него на http://-адреса.
+// Пример: const BACKEND_URL = 'https://api.example.com';
 const BACKEND_URL = '';
 
 // Material You Soft / Desaturated Color Generator
@@ -754,6 +754,9 @@ function slimMovie(m) {
 }
 
 async function apiFetch(path, { method = 'GET', body, token = authToken } = {}) {
+    if (!ZIB_API && /\.github\.io$/.test(location.hostname)) {
+        throw Object.assign(new Error('Не указан адрес сервера. Задайте BACKEND_URL в начале script.js.'), { status: 0 });
+    }
     let res;
     try {
         res = await fetch(ZIB_API + path, {
