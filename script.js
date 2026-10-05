@@ -1,13 +1,4 @@
-/* ============================================================
-   Zib Cinema — скрипт сайта
-   1) тема (Material You) — применяется сразу, чтобы не мигали цвета
-   2) основная логика: каталог, плеер, профили, избранное
-   ============================================================ */
-
-// Адрес бэкенда профилей (сервер на VPS). Обязательно с https:// — GitHub Pages работает по HTTPS,
-// а браузер блокирует запросы с него на http://-адреса.
-// Пример: const BACKEND_URL = 'https://api.example.com';
-const BACKEND_URL = '';
+const BACKEND_URL = 'https://backend.zib-cinema.netcraze.link:65083';
 
 // Material You Soft / Desaturated Color Generator
 let currentThemeMode = 'dark';
