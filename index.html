@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <title>Zib Cinema</title>
 
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/babyun42/ZIb-Cinema/main/favicon.png">
+
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -125,7 +127,7 @@
     </header>
 
     <!-- Main Content Body -->
-    <main class="max-w-7xl mx-auto px-4 lg:px-8 py-6 space-y-8 min-h-[70vh]" id="main-content">
+    <main class="w-full max-w-7xl mx-auto px-4 lg:px-8 py-6 space-y-8 min-h-[70vh]" id="main-content">
 
         <!-- VIEW 1: HOME -->
         <section id="home-view" class="view-anim transition-all duration-300 ease-out space-y-10">
@@ -254,20 +256,28 @@
             </div>
 
             <!-- Dynamic Metadata -->
-            <div class="bg-m3-surfaceContainerHigh p-6 sm:p-8 rounded-4xl border border-m3-outlineVariant/30 space-y-4 shadow-lg relative overflow-hidden">
+            <div class="bg-m3-surfaceContainerHigh p-5 sm:p-8 rounded-4xl border border-m3-outlineVariant/30 shadow-lg relative overflow-hidden">
                 <div id="meta-bg-blur" class="absolute inset-0 bg-cover bg-center opacity-10 blur-xl scale-110 pointer-events-none"></div>
 
-                <div class="relative z-10">
-                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-m3-outlineVariant/20 pb-4">
-                        <div>
-                            <h2 class="text-2xl sm:text-3xl font-black text-m3-onSurface" id="player-movie-title">...</h2>
+                <div class="relative z-10 flex items-start gap-4 sm:gap-6">
+                    <!-- Постер: нажмите, чтобы открыть крупно -->
+                    <button onclick="openPosterViewer()" id="player-poster-btn" aria-label="Открыть постер" class="group/poster relative shrink-0 w-24 sm:w-40 lg:w-48 aspect-[2/3] rounded-2xl sm:rounded-3xl overflow-hidden bg-m3-surfaceContainerLowest border border-m3-outlineVariant/30 shadow-xl cursor-zoom-in">
+                        <img id="player-poster-img" alt="" referrerpolicy="no-referrer" class="w-full h-full object-cover transition-transform duration-500 group-hover/poster:scale-105">
+                        <span class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover/poster:opacity-100 transition-opacity">
+                            <i class="fa-solid fa-expand text-white text-xl"></i>
+                        </span>
+                    </button>
+
+                    <div class="min-w-0 flex-1">
+                        <div class="border-b border-m3-outlineVariant/20 pb-4">
+                            <h2 class="text-xl sm:text-3xl font-black text-m3-onSurface" id="player-movie-title">...</h2>
                             <div class="flex flex-wrap items-center gap-2 text-xs text-m3-secondary mt-2" id="player-movie-meta">
                             </div>
                         </div>
+                        <p class="text-sm text-m3-secondary leading-relaxed mt-4 max-w-4xl" id="player-movie-description">
+                            Загрузка описания...
+                        </p>
                     </div>
-                    <p class="text-sm text-m3-secondary leading-relaxed mt-4 max-w-4xl" id="player-movie-description">
-                        Загрузка описания...
-                    </p>
                 </div>
             </div>
         </section>
@@ -375,9 +385,71 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Интерфейс -->
+            <div class="bg-m3-surfaceContainer p-5 sm:p-6 rounded-3xl border border-m3-outlineVariant/30 space-y-4">
+                <h3 class="font-bold text-m3-onSurface text-sm">Интерфейс</h3>
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <div class="text-sm font-medium text-m3-onSurface">Подсветка вкладок при наведении</div>
+                        <p class="text-xs text-m3-outline mt-0.5">Лёгкая подсветка вкладки в шапке, на которую наведён курсор.</p>
+                    </div>
+                    <button type="button" role="switch" aria-checked="true" data-ui-option="navHover" onclick="toggleUiOption('navHover')" aria-label="Подсветка вкладок при наведении" class="zib-switch shrink-0"></button>
+                </div>
+            </div>
+
+            <!-- Данные -->
+            <div class="bg-m3-surfaceContainer p-5 sm:p-6 rounded-3xl border border-m3-outlineVariant/30 space-y-4">
+                <h3 class="font-bold text-m3-onSurface text-sm">Данные</h3>
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <div class="text-sm font-medium text-m3-onSurface">История просмотров</div>
+                        <p class="text-xs text-m3-outline mt-0.5">Удалить всю историю. Отдельный фильм можно убрать крестиком на его карточке.</p>
+                    </div>
+                    <button onclick="clearHistory()" class="shrink-0 px-4 py-2 rounded-full bg-m3-surfaceContainerHigh hover:bg-red-500/20 text-red-300 text-xs font-bold border border-m3-outlineVariant/40 cursor-pointer">
+                        <i class="fa-regular fa-trash-can mr-1.5"></i>Очистить
+                    </button>
+                </div>
+            </div>
+
+            <!-- О сайте -->
+            <div class="bg-m3-surfaceContainer p-5 sm:p-6 rounded-3xl border border-m3-outlineVariant/30 space-y-4">
+                <h3 class="font-bold text-m3-onSurface text-sm">О сайте</h3>
+                <button onclick="openSiteInfo()" class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-m3-surfaceContainerLow hover:bg-m3-surfaceContainerHigh border border-m3-outlineVariant/30 text-left cursor-pointer">
+                    <span class="flex items-center gap-3">
+                        <span class="w-9 h-9 rounded-2xl bg-m3-primaryContainer text-m3-onPrimaryContainer flex items-center justify-center"><i class="fa-solid fa-circle-info"></i></span>
+                        <span class="text-sm font-medium text-m3-onSurface">Информация</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-right text-xs text-m3-outline"></i>
+                </button>
+            </div>
         </section>
 
     </main>
+
+    <!-- Просмотр постера -->
+    <div id="poster-viewer" class="zib-modal" aria-hidden="true" onclick="if(event.target===this)closeModal('poster-viewer')">
+        <button onclick="closeModal('poster-viewer')" aria-label="Закрыть" class="absolute top-4 right-4 w-11 h-11 rounded-full bg-black/60 hover:bg-black/80 text-white border border-white/10 cursor-pointer">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <div class="zib-modal-box flex flex-col items-center gap-3 max-w-full">
+            <img id="poster-viewer-img" alt="" referrerpolicy="no-referrer" class="max-h-[82vh] max-w-[92vw] rounded-3xl shadow-2xl object-contain bg-black/30">
+            <div id="poster-viewer-caption" class="text-sm text-white/80 text-center"></div>
+        </div>
+    </div>
+
+    <!-- Информация о сайте (текст задаётся в script.js: SITE_INFO_TITLE / SITE_INFO_TEXT) -->
+    <div id="info-modal" class="zib-modal" aria-hidden="true" onclick="if(event.target===this)closeModal('info-modal')">
+        <div class="zib-modal-box w-full max-w-lg max-h-[85vh] overflow-y-auto bg-m3-surfaceContainerHigh rounded-4xl border border-m3-outlineVariant/30 shadow-2xl p-6 sm:p-8">
+            <div class="flex items-start justify-between gap-4">
+                <h3 id="info-modal-title" class="text-xl font-bold text-m3-onSurface"></h3>
+                <button onclick="closeModal('info-modal')" aria-label="Закрыть" class="w-9 h-9 shrink-0 rounded-full bg-m3-surfaceContainerHighest text-m3-onSurface cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="info-modal-body" class="mt-4 space-y-3 text-sm text-m3-secondary leading-relaxed"></div>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer class="bg-m3-surfaceContainer border-t border-m3-outlineVariant/20 py-6 mt-auto transition-colors duration-300">

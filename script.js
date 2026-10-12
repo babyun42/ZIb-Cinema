@@ -1,4 +1,19 @@
+
 const BACKEND_URL = 'https://zib-cinema.xyz';
+
+// ===== Настройки внешнего вида =====
+// Насколько затухание по краям слайдеров («Популярное сейчас», «Вы смотрели») выходит за карточки
+// вверх и вниз, в пикселях. Увеличьте, если приподнятая при наведении карточка вылезает за затухание.
+// Не ставьте больше ~14: иначе затухание начнёт заходить на заголовки над слайдерами.
+const SLIDER_FADE_EXTRA_TOP = 10;
+const SLIDER_FADE_EXTRA_BOTTOM = 10;
+
+// ===== Информация о сайте =====
+// Этот текст показывается по кнопке «Информация» в настройках. Пустая строка между абзацами = новый абзац.
+const SITE_INFO_TITLE = 'О сайте';
+const SITE_INFO_TEXT = `Zib Cinema — сайт для просмотра фильмов.
+
+Здесь пока нет подробной информации. Владелец сайта скоро её добавит.`;
 
 // Material You Soft / Desaturated Color Generator
 let currentThemeMode = 'dark';
@@ -165,6 +180,10 @@ function setThemeColor(hexColor) {
 }
 
 function updateSettingsUIActiveStates() {
+    document.querySelectorAll('[data-ui-option]').forEach(sw => {
+        sw.setAttribute('aria-checked', String(getUiOption(sw.dataset.uiOption)));
+    });
+
     ['dark', 'light'].forEach(mode => {
         const btn = document.getElementById('theme-mode-btn-' + mode);
         if (!btn) return;
@@ -195,8 +214,129 @@ function updateSettingsUIActiveStates() {
     if (hexLabel) hexLabel.innerText = currentThemeColor.toUpperCase();
 }
 
+// ================= ПЕРЕКЛЮЧАТЕЛИ ИНТЕРФЕЙСА =================
+// Чтобы добавить новую настройку: допишите её сюда, добавьте switch в разметку (data-ui-option="имя")
+// и опишите в CSS, что делает класс offClass на <html>.
+const UI_OPTIONS = {
+    navHover: { storageKey: 'zibUiNavHover', defaultOn: true, offClass: 'no-nav-hover' } // подсветка вкладок шапки при наведении
+};
+
+function getUiOption(name) {
+    const o = UI_OPTIONS[name];
+    const v = localStorage.getItem(o.storageKey);
+    return v === null ? o.defaultOn : v === '1';
+}
+
+function applyUiOptions() {
+    for (const name of Object.keys(UI_OPTIONS)) {
+        document.documentElement.classList.toggle(UI_OPTIONS[name].offClass, !getUiOption(name));
+    }
+}
+
+function toggleUiOption(name) {
+    localStorage.setItem(UI_OPTIONS[name].storageKey, getUiOption(name) ? '0' : '1');
+    applyUiOptions();
+    updateSettingsUIActiveStates();
+}
+
+applyUiOptions();
+
+// ================= МОДАЛЬНЫЕ ОКНА =================
+function openModal(id) {
+    const m = document.getElementById(id);
+    if (!m) return;
+    m.classList.add('is-open');
+    m.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeModal(id) {
+    const m = document.getElementById(id);
+    if (!m) return;
+    m.classList.remove('is-open');
+    m.setAttribute('aria-hidden', 'true');
+    if (!document.querySelector('.zib-modal.is-open')) document.body.style.overflow = '';
+}
+
+function closeAllModals() {
+    document.querySelectorAll('.zib-modal.is-open').forEach(m => closeModal(m.id));
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllModals(); });
+
+function openSiteInfo() {
+    document.getElementById('info-modal-title').textContent = SITE_INFO_TITLE;
+    const body = document.getElementById('info-modal-body');
+    body.innerHTML = SITE_INFO_TEXT.split(/\n\s*\n/).map(par => `<p>${esc(par.trim()).replace(/\n/g, '<br>')}</p>`).join('');
+    openModal('info-modal');
+}
+
+let currentPosterFull = '';
+let currentPosterTitle = '';
+
+function openPosterViewer() {
+    const thumb = document.getElementById('player-poster-img');
+    const img = document.getElementById('poster-viewer-img');
+    const thumbSrc = thumb ? thumb.src : '';
+    img.onerror = () => { img.onerror = null; img.src = thumbSrc || fallbackPoster; };
+    img.src = currentPosterFull || thumbSrc || fallbackPoster;
+    document.getElementById('poster-viewer-caption').textContent = currentPosterTitle;
+    openModal('poster-viewer');
+}
+
+// ================= АДРЕС СТРАНИЦЫ =================
+// Страница запоминается в адресе (#/popular, #/movie/301), поэтому после F5 вы остаётесь там же,
+// а кнопки браузера «назад/вперёд» тоже работают. Хэш-адреса не требуют настроек сервера и подходят для GitHub Pages.
+const ROUTE_TABS = ['home', 'popular', 'collections', 'profile', 'settings'];
+let routeWritesEnabled = false;      // выключено, пока страница восстанавливается после загрузки
+let currentRouteHash = location.hash;
+let movieOpenedFromList = false;     // фильм открыт из списка в этой сессии → «Назад» = шаг назад в истории
+
+function setRoute(hash) {
+    if (!routeWritesEnabled || location.hash === hash) return;
+    currentRouteHash = hash;
+    location.hash = hash;
+}
+
+function parseRoute(hash) {
+    const parts = String(hash || '').replace(/^#\/?/, '').split('/');
+    if (parts[0] === 'movie' && /^\d{1,10}$/.test(parts[1] || '')) return { type: 'movie', id: parts[1] };
+    if (ROUTE_TABS.includes(parts[0])) return { type: 'tab', tab: parts[0] };
+    return { type: 'tab', tab: 'home' };
+}
+
+function isPlayerVisible() {
+    const v = document.getElementById('player-view');
+    return !!v && !v.classList.contains('hidden');
+}
+
+// Кнопки браузера «назад/вперёд» и ручное изменение адреса
+function applyRoute() {
+    const r = parseRoute(location.hash);
+    if (r.type === 'movie') {
+        if (String(activeMovieId) !== r.id) openMoviePlayer(r.id);
+        return;
+    }
+    const wasPlayer = isPlayerVisible();
+    if (wasPlayer || currentActiveTab !== r.tab) {
+        switchNavTab(r.tab);
+        if (wasPlayer) restoreListState();
+    }
+}
+
+window.addEventListener('hashchange', () => {
+    if (location.hash === currentRouteHash) return; // это мы сами поменяли адрес
+    currentRouteHash = location.hash;
+    closeAllModals();
+    applyRoute();
+});
+
 window.onload = function() {
-    switchNavTab('home');
+    // восстанавливаем страницу из адреса (без записи в историю)
+    const initialRoute = parseRoute(location.hash);
+    let baseTab = initialRoute.type === 'tab' ? initialRoute.tab : sessionStorage.getItem('zibBackTab');
+    if (!ROUTE_TABS.includes(baseTab)) baseTab = 'home';
+    switchNavTab(baseTab);
     initSliderFades();
     initSliderArrows();
     loadHomeData();
@@ -213,6 +353,12 @@ window.onload = function() {
     window.addEventListener('resize', () => {
         updateNavIndicator(currentActiveTab);
     });
+
+    routeWritesEnabled = true;
+    if (initialRoute.type === 'movie') {
+        openMoviePlayer(initialRoute.id);
+        movieOpenedFromList = false; // после перезагрузки «Назад» ведёт в раздел, откуда открывали фильм
+    }
 };
 
 
@@ -227,8 +373,8 @@ function updateSliderFade(el) {
     // Полосы строго по высоте карточек. (Отрицательные отступы слайдера «схлопываются» с контейнером,
     // поэтому высоту контейнера использовать нельзя — полосы заезжали бы на заголовки.)
     [fl, fr].forEach(o => {
-        o.style.top = first.offsetTop + 'px';
-        o.style.height = first.offsetHeight + 'px';
+        o.style.top = (first.offsetTop - SLIDER_FADE_EXTRA_TOP) + 'px';
+        o.style.height = (first.offsetHeight + SLIDER_FADE_EXTRA_TOP + SLIDER_FADE_EXTRA_BOTTOM) + 'px';
     });
 
     const box = el.getBoundingClientRect();
@@ -278,7 +424,7 @@ function initSliderArrows() {
     }, { passive: true });
 }
 
-function createMovieCard(movie, isSlider = false) {
+function createMovieCard(movie, isSlider = false, opts = {}) {
     const mId = movie.kinopoiskId || movie.filmId;
     const rating = movie.ratingKinopoisk || movie.ratingImdb || movie.rating || '—';
     const year = movie.year || 'Н/Д';
@@ -307,6 +453,7 @@ function createMovieCard(movie, isSlider = false) {
             <button type="button" data-fav="${mId}" aria-label="Избранное" onclick="event.stopPropagation(); toggleFavorite('${mId}')" class="fav-btn ${isFav ? 'is-fav' : ''} absolute top-2 left-2 z-10 w-7 h-7 rounded-full bg-black/70 border border-white/10 flex items-center justify-center text-xs cursor-pointer">
                 <i class="${isFav ? 'fa-solid text-rose-400' : 'fa-regular text-white'} fa-heart"></i>
             </button>
+            ${opts.removable ? `<button type="button" title="Убрать из истории" aria-label="Убрать из истории" onclick="event.stopPropagation(); removeFromHistory('${mId}', this)" class="hist-remove-btn absolute bottom-2 right-2 z-10 w-7 h-7 rounded-full bg-black/70 hover:bg-red-500/80 border border-white/10 flex items-center justify-center text-xs text-white cursor-pointer"><i class="fa-solid fa-xmark"></i></button>` : ''}
         </div>
         <div class="flex-grow flex flex-col justify-end">
             <h3 class="font-bold text-xs sm:text-sm text-m3-onSurface line-clamp-2 group-hover:text-m3-primary transition-colors leading-tight">${name}</h3>
@@ -401,6 +548,7 @@ function updateNavIndicator(tabName) {
 
 function switchNavTab(tabName) {
     stopPlayer();
+    setRoute('#/' + tabName);
 
     document.querySelectorAll('.nav-tab-btn').forEach(btn => {
         btn.classList.remove('text-m3-onPrimaryContainer', 'font-bold', 'is-active-tab');
@@ -512,6 +660,11 @@ function restoreListState() {
 }
 
 function showCatalogView() {
+    if (movieOpenedFromList && routeWritesEnabled) { // шаг назад в истории вернёт список и место в нём
+        movieOpenedFromList = false;
+        history.back();
+        return;
+    }
     stopPlayer();
     switchNavTab(currentActiveTab);
     restoreListState();
@@ -854,7 +1007,7 @@ function renderHistory() {
     if (history.length === 0) {
         slider.innerHTML = `<div class="text-sm text-m3-outline py-6 px-4 bg-m3-surfaceContainerLow rounded-2xl w-full border border-m3-outlineVariant/20 border-dashed text-center">Вы еще ничего не смотрели. История пуста.</div>`;
     } else {
-        slider.innerHTML = history.map(movie => createMovieCard(movie, true)).join('');
+        slider.innerHTML = history.map(movie => createMovieCard(movie, true, { removable: true })).join('');
     }
     if (currentActiveTab === 'profile') renderProfileView();
 }
@@ -880,6 +1033,8 @@ function addToHistory(movieData) {
 }
 
 function clearHistory() {
+    if (!getHistory().length) { showToast('История уже пуста.'); return; }
+    if (!confirm('Очистить всю историю просмотров?')) return;
     if (authUser) {
         authHistory = [];
         saveAuthCache();
@@ -888,6 +1043,32 @@ function clearHistory() {
         localStorage.removeItem('zibHistory');
     }
     renderHistory();
+}
+
+// Убрать один фильм из истории
+function removeFromHistory(id, btn) {
+    id = String(id);
+    const list = getHistory().filter(m => String(m.kinopoiskId || m.filmId) !== id);
+    if (authUser) {
+        authHistory = list;
+        saveAuthCache();
+        apiFetch('/api/history/' + id, { method: 'DELETE' }).catch(e => showToast('Не удалось удалить на сервере: ' + e.message));
+    } else {
+        localStorage.setItem('zibHistory', JSON.stringify(list));
+    }
+
+    const slider = document.getElementById('home-history-slider');
+    const card = btn && btn.closest('[data-mid]');
+    const finish = () => {
+        if (card) card.remove();
+        if (!list.length) renderHistory(); else updateSliderFade(slider);
+        if (currentActiveTab === 'profile') renderProfileView();
+    };
+    if (!card) return finish();
+    card.style.pointerEvents = 'none';
+    card.style.opacity = '0';
+    card.style.transform = 'scale(.9)';
+    setTimeout(finish, 260);
 }
 
 // ---------- избранное ----------
@@ -1443,7 +1624,13 @@ async function executeDirectSearch() {
 }
 
 async function openMoviePlayer(kpId) {
+    kpId = String(kpId);
+    if (!isPlayerVisible()) {
+        movieOpenedFromList = routeWritesEnabled;
+        sessionStorage.setItem('zibBackTab', currentActiveTab === 'search' ? 'home' : currentActiveTab);
+    }
     saveListState(kpId);
+    setRoute('#/movie/' + kpId);
     document.getElementById('search-suggestions').classList.add('hidden');
     document.getElementById('search-input').value = '';
 
@@ -1466,6 +1653,13 @@ async function openMoviePlayer(kpId) {
     document.getElementById('player-movie-description').innerText = '';
     document.getElementById('player-movie-meta').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-m3-primary"></i>';
     document.getElementById('meta-bg-blur').style.backgroundImage = 'none';
+
+    // постер: миниатюра сразу, чтобы блок не прыгал
+    currentPosterFull = '';
+    currentPosterTitle = '';
+    const posterImg = document.getElementById('player-poster-img');
+    posterImg.onerror = () => { posterImg.onerror = null; posterImg.src = fallbackPoster; };
+    posterImg.src = `https://st.kp.yandex.net/images/film_big/${kpId}.jpg`;
 
     activeMovieId = kpId;
     activeMovieType = 'FILM';
@@ -1506,6 +1700,8 @@ async function openMoviePlayer(kpId) {
             `;
 
             document.getElementById('meta-bg-blur').style.backgroundImage = `url('https://st.kp.yandex.net/images/film_big/${kpId}.jpg')`;
+            currentPosterFull = film.posterUrl || '';
+            currentPosterTitle = name;
 
             const slimFilm = slimMovie(film);
             if (slimFilm) { movieRegistry.set(String(kpId), slimFilm); }

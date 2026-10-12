@@ -114,10 +114,6 @@ button:not(:disabled):active { scale: .96; }
     content-visibility: auto;
     contain-intrinsic-block-size: auto 340px; /* примерная высота до первого показа, потом запоминается реальная */
 }
-/* Огромный список не двигаем transform'ом (это создаёт гигантский слой) — только плавное появление */
-#popular-view.view-anim, #search-view.view-anim { transition-property: opacity; }
-#popular-view.view-anim.view-enter-right, #popular-view.view-anim.view-enter-left,
-#search-view.view-anim.view-enter-right, #search-view.view-anim.view-enter-left { transform: none; }
 
 /* ===== Плавное затухание обложек по краям слайдера ===== */
 /* Раньше затухание делалось маской на самом слайдере — вместе с hover-эффектами и размытием оно
@@ -167,3 +163,68 @@ button:not(:disabled):active { scale: .96; }
     .nav-tab-btn .nav-label { max-width: none; margin-left: .5rem; opacity: 1; transition: none; }
     .nav-tab-btn .nav-label-mobile-only { display: none; }
 }
+
+
+/* ===== Отключаемая подсветка вкладок шапки (Настройки → Интерфейс) ===== */
+.no-nav-hover .nav-tab-btn:hover::before,
+.no-nav-hover .nav-tab-btn:active::before { opacity: 0; }
+.no-nav-hover .nav-tab-btn:not(.is-active-tab):hover { color: rgb(var(--m3-secondary)); }
+
+/* ===== Переключатель (switch) в стиле Material You ===== */
+.zib-switch {
+    position: relative;
+    width: 52px;
+    height: 30px;
+    border-radius: 9999px;
+    border: 2px solid rgb(var(--m3-outline));
+    background: rgb(var(--m3-surface-container-highest));
+    cursor: pointer;
+}
+.zib-switch::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 4px;
+    width: 14px;
+    height: 14px;
+    margin-top: -7px;
+    border-radius: 50%;
+    background: rgb(var(--m3-outline));
+    transition: transform .28s cubic-bezier(.2, .8, .2, 1), width .2s ease, height .2s ease, margin-top .2s ease, background-color .2s ease;
+}
+.zib-switch[aria-checked="true"] { background: rgb(var(--m3-primary)); border-color: rgb(var(--m3-primary)); }
+.zib-switch[aria-checked="true"]::after {
+    width: 20px;
+    height: 20px;
+    margin-top: -10px;
+    transform: translateX(22px);
+    background: rgb(var(--m3-on-primary));
+}
+.zib-switch:active::after { width: 22px; }
+
+/* ===== Кнопка «убрать из истории» на карточке ===== */
+.hist-remove-btn { opacity: 0; }
+.group:hover .hist-remove-btn, .hist-remove-btn:focus-visible { opacity: 1; }
+@media (hover: none) { .hist-remove-btn { opacity: 1; } }
+
+/* ===== Модальные окна (постер, информация о сайте) ===== */
+.zib-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(0, 0, 0, .78);
+    backdrop-filter: blur(6px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .25s ease, visibility .25s;
+}
+.zib-modal.is-open { opacity: 1; visibility: visible; }
+.zib-modal-box {
+    transform: scale(.94) translateY(10px);
+    transition: transform .3s cubic-bezier(.2, .8, .2, 1);
+}
+.zib-modal.is-open .zib-modal-box { transform: none; }
