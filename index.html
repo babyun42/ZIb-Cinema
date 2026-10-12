@@ -61,15 +61,13 @@
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
 
             <!-- Logo & Title -->
-            <div class="flex items-center justify-between w-full md:w-auto">
-                <div class="flex items-center gap-3 cursor-pointer group" onclick="switchNavTab('home')">
-                    <div class="w-10 h-10 rounded-2xl bg-m3-primaryContainer text-m3-onPrimaryContainer flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
-                        <i class="fa-solid fa-play text-lg ml-0.5"></i>
-                    </div>
-                    <span class="text-xl font-bold tracking-wide text-m3-onSurface">
-                        Zib <span class="text-m3-primary font-black">Cinema</span>
-                    </span>
+            <div class="flex items-center gap-3 cursor-pointer group/logo" onclick="switchNavTab('home')">
+                <div class="w-10 h-10 rounded-2xl bg-m3-primaryContainer text-m3-onPrimaryContainer flex items-center justify-center shadow-md transition-transform duration-200 ease-[cubic-bezier(.2,.8,.2,1)] transform-gpu will-change-transform group-hover/logo:scale-[1.08] group-active/logo:scale-95">
+                    <i class="fa-solid fa-play text-lg ml-0.5"></i>
                 </div>
+                    <span class="text-xl font-bold tracking-wide text-m3-onSurface">
+                    Zib <span class="text-m3-primary font-black">Cinema</span>
+                </span>
             </div>
 
             <!-- Unified Material 3 Navigation Tabs -->
@@ -318,7 +316,7 @@
         </section>
 
         <!-- VIEW 4: SETTINGS VIEW -->
-        <section id="settings-view" class="view-anim transition-all duration-300 ease-out hidden space-y-6 max-w-2xl">
+        <section id="settings-view" class="view-anim transition-all duration-300 ease-out hidden space-y-6 max-w-2xl mx-auto">
             <div>
                 <h2 class="text-2xl font-bold text-m3-onSurface flex items-center gap-2">
                     <i class="fa-solid fa-gear text-m3-primary"></i> Настройки
@@ -326,70 +324,69 @@
                 <p class="text-m3-secondary text-sm mt-1">Приглушённая и облегчённая палитра Material You.</p>
             </div>
 
-            <!-- Тема оформления -->
-            <div class="bg-m3-surfaceContainer p-5 sm:p-6 rounded-3xl border border-m3-outlineVariant/30 space-y-4">
-                <h3 class="font-bold text-m3-onSurface text-sm">Режим темы</h3>
-                <div class="grid grid-cols-2 gap-3">
-                    <button onclick="setThemeMode('dark')" id="theme-mode-btn-dark" class="theme-mode-btn flex items-center justify-center gap-2 py-3 rounded-2xl border-2 transition-all font-medium text-sm cursor-pointer">
-                        <i class="fa-solid fa-moon"></i> Тёмная
-                    </button>
-                    <button onclick="setThemeMode('light')" id="theme-mode-btn-light" class="theme-mode-btn flex items-center justify-center gap-2 py-3 rounded-2xl border-2 transition-all font-medium text-sm cursor-pointer">
-                        <i class="fa-solid fa-sun"></i> Светлая
-                    </button>
-                </div>
-            </div>
+            <!-- Интерфейс -->
+            <div class="bg-m3-surfaceContainer p-5 sm:p-6 rounded-3xl border border-m3-outlineVariant/30 space-y-6">
+                <h3 class="font-bold text-m3-onSurface text-sm">Интерфейс</h3>
 
-            <!-- Выбор приглушённого цвета -->
-            <div class="bg-m3-surfaceContainer p-5 sm:p-6 rounded-3xl border border-m3-outlineVariant/30 space-y-5">
-                <div>
-                    <h3 class="font-bold text-m3-onSurface text-sm">Приглушённые природные пресеты</h3>
-                    <p class="text-m3-outline text-xs mt-0.5">Выберите естественный матовый оттенок или укажите свой цвет.</p>
-                </div>
-
-                <!-- Soft Desaturated Swatches Grid -->
-                <div class="flex flex-wrap gap-3" id="color-swatches-container">
-                    <button onclick="setThemeColor('#8C694D')" data-color="#8C694D" class="color-swatch-btn w-11 h-11 rounded-full border-2 border-transparent transition-all flex items-center justify-center cursor-pointer shadow-md" style="background:#8C694D" title="Песочно-кофейный">
-                        <i class="fa-solid fa-check text-white text-xs hidden check-icon"></i>
-                    </button>
-                    <button onclick="setThemeColor('#5B7B68')" data-color="#5B7B68" class="color-swatch-btn w-11 h-11 rounded-full border-2 border-transparent transition-all flex items-center justify-center cursor-pointer shadow-md" style="background:#5B7B68" title="Шалфейный">
-                        <i class="fa-solid fa-check text-white text-xs hidden check-icon"></i>
-                    </button>
-                    <button onclick="setThemeColor('#5B7083')" data-color="#5B7083" class="color-swatch-btn w-11 h-11 rounded-full border-2 border-transparent transition-all flex items-center justify-center cursor-pointer shadow-md" style="background:#5B7083" title="Дымчато-синий">
-                        <i class="fa-solid fa-check text-white text-xs hidden check-icon"></i>
-                    </button>
-                    <button onclick="setThemeColor('#9E6B5C')" data-color="#9E6B5C" class="color-swatch-btn w-11 h-11 rounded-full border-2 border-transparent transition-all flex items-center justify-center cursor-pointer shadow-md" style="background:#9E6B5C" title="Терракотовый">
-                        <i class="fa-solid fa-check text-white text-xs hidden check-icon"></i>
-                    </button>
-                    <button onclick="setThemeColor('#7C6B83')" data-color="#7C6B83" class="color-swatch-btn w-11 h-11 rounded-full border-2 border-transparent transition-all flex items-center justify-center cursor-pointer shadow-md" style="background:#7C6B83" title="Сливковый">
-                        <i class="fa-solid fa-check text-white text-xs hidden check-icon"></i>
-                    </button>
-                    <button onclick="setThemeColor('#8C7A4D')" data-color="#8C7A4D" class="color-swatch-btn w-11 h-11 rounded-full border-2 border-transparent transition-all flex items-center justify-center cursor-pointer shadow-md" style="background:#8C7A4D" title="Мягкий янтарь">
-                        <i class="fa-solid fa-check text-white text-xs hidden check-icon"></i>
-                    </button>
-                    <button onclick="setThemeColor('#537A7A')" data-color="#537A7A" class="color-swatch-btn w-11 h-11 rounded-full border-2 border-transparent transition-all flex items-center justify-center cursor-pointer shadow-md" style="background:#537A7A" title="Приглушённо-бирюзовый">
-                        <i class="fa-solid fa-check text-white text-xs hidden check-icon"></i>
-                    </button>
-                    <button onclick="setThemeColor('#6E7278')" data-color="#6E7278" class="color-swatch-btn w-11 h-11 rounded-full border-2 border-transparent transition-all flex items-center justify-center cursor-pointer shadow-md" style="background:#6E7278" title="Пепельный">
-                        <i class="fa-solid fa-check text-white text-xs hidden check-icon"></i>
-                    </button>
-                </div>
-
-                <!-- Custom Color Picker Input -->
-                <div class="pt-2 border-t border-m3-outlineVariant/20 flex items-center justify-between">
-                    <span class="text-xs font-semibold text-m3-onSurface flex items-center gap-2">
-                        <i class="fa-solid fa-palette text-m3-primary"></i> Свой оттенок из палитры
-                    </span>
-                    <div class="flex items-center gap-3">
-                        <input type="color" id="custom-color-picker" onchange="setThemeColor(this.value)" oninput="setThemeColor(this.value)" class="w-10 h-10 rounded-xl cursor-pointer border-0 bg-transparent p-0">
-                        <span id="custom-hex-label" class="text-xs font-mono text-m3-outline uppercase">#8C694D</span>
+                <!-- Режим темы -->
+                <div class="space-y-3">
+                    <h4 class="text-sm font-medium text-m3-onSurface">Режим темы</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="setThemeMode('dark')" id="theme-mode-btn-dark" class="theme-mode-btn flex items-center justify-center gap-2 py-3 rounded-2xl border-2 transition-all font-medium text-sm cursor-pointer">
+                            <i class="fa-solid fa-moon"></i> Тёмная
+                        </button>
+                        <button onclick="setThemeMode('light')" id="theme-mode-btn-light" class="theme-mode-btn flex items-center justify-center gap-2 py-3 rounded-2xl border-2 transition-all font-medium text-sm cursor-pointer">
+                            <i class="fa-solid fa-sun"></i> Светлая
+                        </button>
                     </div>
                 </div>
-            </div>
 
-            <!-- Интерфейс -->
-            <div class="bg-m3-surfaceContainer p-5 sm:p-6 rounded-3xl border border-m3-outlineVariant/30 space-y-4">
-                <h3 class="font-bold text-m3-onSurface text-sm">Интерфейс</h3>
-                <div class="flex items-center justify-between gap-4">
+                <!-- Пресеты цвета + свой цвет -->
+                <div class="space-y-3">
+                    <div>
+                        <h4 class="text-sm font-medium text-m3-onSurface">Приглушённые природные пресеты</h4>
+                        <p class="text-m3-outline text-xs mt-0.5">Выберите естественный матовый оттенок или укажите свой цвет.</p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3">
+                        <!-- Палитра свотчей (слева) -->
+                        <div class="flex flex-wrap gap-3" id="color-swatches-container">
+                            <button onclick="setThemeColor('#8C694D')" data-color="#8C694D" class="color-swatch-btn w-11 h-11 rounded-full border-2 border-transparent transition-all flex items-center justify-center cursor-pointer shadow-md" style="background:#8C694D" title="Песочно-кофейный">
+                                <i class="fa-solid fa-check text-white text-xs hidden check-icon"></i>
+                            </button>
+                            <button onclick="setThemeColor('#5B7B68')" data-color="#5B7B68" class="color-swatch-btn w-11 h-11 rounded-full border-2 border-transparent transition-all flex items-center justify-center cursor-pointer shadow-md" style="background:#5B7B68" title="Шалфейный">
+                                <i class="fa-solid fa-check text-white text-xs hidden check-icon"></i>
+                            </button>
+                            <button onclick="setThemeColor('#5B7083')" data-color="#5B7083" class="color-swatch-btn w-11 h-11 rounded-full border-2 border-transparent transition-all flex items-center justify-center cursor-pointer shadow-md" style="background:#5B7083" title="Дымчато-синий">
+                                <i class="fa-solid fa-check text-white text-xs hidden check-icon"></i>
+                            </button>
+                            <button onclick="setThemeColor('#9E6B5C')" data-color="#9E6B5C" class="color-swatch-btn w-11 h-11 rounded-full border-2 border-transparent transition-all flex items-center justify-center cursor-pointer shadow-md" style="background:#9E6B5C" title="Терракотовый">
+                                <i class="fa-solid fa-check text-white text-xs hidden check-icon"></i>
+                            </button>
+                            <button onclick="setThemeColor('#7C6B83')" data-color="#7C6B83" class="color-swatch-btn w-11 h-11 rounded-full border-2 border-transparent transition-all flex items-center justify-center cursor-pointer shadow-md" style="background:#7C6B83" title="Сливковый">
+                                <i class="fa-solid fa-check text-white text-xs hidden check-icon"></i>
+                            </button>
+                            <button onclick="setThemeColor('#8C7A4D')" data-color="#8C7A4D" class="color-swatch-btn w-11 h-11 rounded-full border-2 border-transparent transition-all flex items-center justify-center cursor-pointer shadow-md" style="background:#8C7A4D" title="Мягкий янтарь">
+                                <i class="fa-solid fa-check text-white text-xs hidden check-icon"></i>
+                            </button>
+                            <button onclick="setThemeColor('#537A7A')" data-color="#537A7A" class="color-swatch-btn w-11 h-11 rounded-full border-2 border-transparent transition-all flex items-center justify-center cursor-pointer shadow-md" style="background:#537A7A" title="Приглушённо-бирюзовый">
+                                <i class="fa-solid fa-check text-white text-xs hidden check-icon"></i>
+                            </button>
+                            <button onclick="setThemeColor('#6E7278')" data-color="#6E7278" class="color-swatch-btn w-11 h-11 rounded-full border-2 border-transparent transition-all flex items-center justify-center cursor-pointer shadow-md" style="background:#6E7278" title="Пепельный">
+                                <i class="fa-solid fa-check text-white text-xs hidden check-icon"></i>
+                            </button>
+                        </div>
+
+                        <!-- Свой цвет (справа, рядом с палитрой) -->
+                        <div class="flex items-center gap-2 ml-auto">
+                            <input type="color" id="custom-color-picker" onchange="setThemeColor(this.value)" oninput="setThemeColor(this.value)" class="w-11 h-11 rounded-xl cursor-pointer border-0 bg-transparent p-0" title="Свой оттенок из палитры">
+                            <span id="custom-hex-label" class="text-xs font-mono text-m3-outline uppercase">#8C694D</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Подсветка вкладок -->
+                <div class="flex items-center justify-between gap-4 pt-2 border-t border-m3-outlineVariant/20">
                     <div>
                         <div class="text-sm font-medium text-m3-onSurface">Подсветка вкладок при наведении</div>
                         <p class="text-xs text-m3-outline mt-0.5">Лёгкая подсветка вкладки в шапке, на которую наведён курсор.</p>
@@ -451,12 +448,7 @@
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-m3-surfaceContainer border-t border-m3-outlineVariant/20 py-6 mt-auto transition-colors duration-300">
-        <div class="max-w-7xl mx-auto px-4 text-center text-[11px] text-m3-outline space-y-1">
-            <p>Zib Cinema &copy; 2026. Данные предоставлены Kinopoisk API Unofficial.</p>
-        </div>
-    </footer>
+
 
     <!-- JavaScript Application Logic -->
 </body>

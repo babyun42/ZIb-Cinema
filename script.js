@@ -2,20 +2,23 @@
 const BACKEND_URL = 'https://zib-cinema.xyz';
 
 // ===== Настройки внешнего вида =====
-// Насколько затухание по краям слайдеров («Популярное сейчас», «Вы смотрели») выходит за карточки
-// вверх и вниз, в пикселях. Увеличьте, если приподнятая при наведении карточка вылезает за затухание.
-// Не ставьте больше ~14: иначе затухание начнёт заходить на заголовки над слайдерами.
 const SLIDER_FADE_EXTRA_TOP = 10;
 const SLIDER_FADE_EXTRA_BOTTOM = 10;
 
 // ===== Информация о сайте =====
-// Этот текст показывается по кнопке «Информация» в настройках. Пустая строка между абзацами = новый абзац.
 const SITE_INFO_TITLE = 'О сайте';
-const SITE_INFO_TEXT = `Zib Cinema — сайт для просмотра фильмов.
+const SITE_INFO_TEXT = `Zib Cinema — просто сайт для просмотра фильмов.
 
-Здесь пока нет подробной информации. Владелец сайта скоро её добавит.`;
+Делал этот сайт потому что не было удобных решений для меня и я хотел сделать что то прикольное в стиле Material you
 
-// Material You Soft / Desaturated Color Generator
+Проект будет поддерживаться и добавлься всякие функции еще много, если вы думаете я его забросил то зайдите на [GitHub](https://github.com/babyun42/ZIb-Cinema) и посмотрите когда было послднее обнавление кода
+
+Может он вам чем то не понрасится но я не имею средств держать фильмы у себя или хотя бы иметь доступ к плееру
+
+Если вы нашли ошибку или просто хотите написать автору сайта то можете написать мне в [Telegram](https://t.me/Babyun42)
+
+Если вам нравится мой сайт то можете поддрежать меня поставив мне stars на [GitHub](https://github.com/babyun42/ZIb-Cinema)`;
+
 let currentThemeMode = 'dark';
 let currentThemeColor = '#8C694D';
 
@@ -264,10 +267,21 @@ function closeAllModals() {
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllModals(); });
 
+// Превращает [текст](адрес) в кликабельную ссылку, всё остальное экранируется
+function formatSiteInfo(text) {
+    return esc(text).replace(
+        /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+        '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-m3-primary font-semibold underline underline-offset-2 hover:text-m3-onSurface transition-colors break-all">$1</a>'
+    );
+}
+
 function openSiteInfo() {
     document.getElementById('info-modal-title').textContent = SITE_INFO_TITLE;
     const body = document.getElementById('info-modal-body');
-    body.innerHTML = SITE_INFO_TEXT.split(/\n\s*\n/).map(par => `<p>${esc(par.trim()).replace(/\n/g, '<br>')}</p>`).join('');
+    body.innerHTML = SITE_INFO_TEXT
+        .split(/\n\s*\n/)
+        .map(par => `<p>${formatSiteInfo(par.trim()).replace(/\n/g, '<br>')}</p>`)
+        .join('');
     openModal('info-modal');
 }
 
@@ -408,6 +422,12 @@ function initSliderArrows() {
     function update() {
         ticking = false;
         document.querySelectorAll('.slider-arrow').forEach(btn => {
+            // Стрелки видны, только когда курсор находится над строкой слайдера
+            const wrapper = btn.closest('[class*="group/slider"]') || btn.parentElement;
+            if (!wrapper || !wrapper.matches(':hover')) {
+                btn.style.opacity = '0';
+                return;
+            }
             const r = btn.getBoundingClientRect();
             if (!r.width) return;
             const dx = mx - (r.left + r.width / 2);
@@ -422,6 +442,17 @@ function initSliderArrows() {
         mx = e.clientX; my = e.clientY;
         if (!ticking) { ticking = true; requestAnimationFrame(update); }
     }, { passive: true });
+
+    // Мгновенно скрываем стрелки, когда курсор покидает строку —
+    // иначе они бы остались на последнем значении до следующего движения мыши
+    document.querySelectorAll('[class*="group/slider"]').forEach(wrapper => {
+        wrapper.addEventListener('mouseleave', () => {
+            wrapper.querySelectorAll('.slider-arrow').forEach(b => b.style.opacity = '0');
+        });
+    });
+
+    // На случай, если страница открылась и мышь уже стояла над строкой — прячем всё сразу
+    document.querySelectorAll('.slider-arrow').forEach(b => b.style.opacity = '0');
 }
 
 function createMovieCard(movie, isSlider = false, opts = {}) {
@@ -809,7 +840,7 @@ async function loadPopularTop100() {
 
     resetPopularState();
 
-    grid.innerHTML = `<div class="col-span-full text-center py-10"><i class="fa-solid fa-spinner fa-spin text-m3-primary text-2xl"></i><span class="ml-3 text-m3-outline text-sm block mt-2">Сбор ТОП-100...</span></div>`;
+    grid.innerHTML = `<div class="col-span-full text-center py-10"><i class="fa-solid fa-spinner fa-spin text-m3-primary text-2xl"></i><span class="ml-3 text-m3-outline text-sm block mt-2">Сбор данных</span></div>`;
 
     try {
         const items = await fetchPopularBatch(100);
@@ -1048,6 +1079,7 @@ function clearHistory() {
 // Убрать один фильм из истории
 function removeFromHistory(id, btn) {
     id = String(id);
+    if (!confirm('Убрать этот фильм из истории просмотров?')) return;
     const list = getHistory().filter(m => String(m.kinopoiskId || m.filmId) !== id);
     if (authUser) {
         authHistory = list;

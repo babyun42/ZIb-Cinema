@@ -140,7 +140,7 @@ button:not(:disabled):active { scale: .96; }
 
 /* ===== Кнопки перемотки: полупрозрачные, проявляются при приближении мыши ===== */
 .slider-arrow {
-    opacity: 0.25;
+    opacity: 0; /* показываются только когда курсор над строкой слайдера (см. initSliderArrows) */
     transition: opacity .15s ease-out, background-color .3s ease, color .3s ease;
 }
 
@@ -164,11 +164,12 @@ button:not(:disabled):active { scale: .96; }
     .nav-tab-btn .nav-label-mobile-only { display: none; }
 }
 
-
 /* ===== Отключаемая подсветка вкладок шапки (Настройки → Интерфейс) ===== */
 .no-nav-hover .nav-tab-btn:hover::before,
 .no-nav-hover .nav-tab-btn:active::before { opacity: 0; }
-.no-nav-hover .nav-tab-btn:not(.is-active-tab):hover { color: rgb(var(--m3-secondary)); }
+/* Настройка выключена: фоновая «пилюля» не появляется,
+   но текст всё равно чуть подсвечивается — мягче, чем при включённой настройке */
+.no-nav-hover .nav-tab-btn:not(.is-active-tab):hover { color: rgb(var(--m3-on-surface) / .99); }
 
 /* ===== Переключатель (switch) в стиле Material You ===== */
 .zib-switch {
