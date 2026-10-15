@@ -19,6 +19,338 @@ const SITE_INFO_TEXT = `Zib Cinema — просто сайт для просмо
 
 Если вам нравится мой сайт то можете поддрежать меня поставив мне stars на [GitHub](https://github.com/babyun42/ZIb-Cinema)`;
 
+// ============================================================================
+// Material You Expressive — индикатор загрузки из морфящихся фигур
+// 35 фигур (как в наборе Material 3 Expressive). Фигуры вращаются и плавно перетекают одна в другую.
+// ============================================================================
+
+// Какие фигуры показывать по кругу. Названия — из списка ZIB_SHAPES ниже, либо 'all' (все 35 фигур).
+let ZIB_LOADER_SHAPES = ['softBurst', 'cookie9', 'pentagon', 'pill', 'sunny', 'cookie4', 'oval'];
+const ZIB_LOADER_HOLD_MS = 200;   // сколько держится фигура
+const ZIB_LOADER_MORPH_MS = 400;  // сколько длится превращение в следующую
+
+const ZIB_SHAPE_N = 240; // число лучей (точек контура)
+
+// ---------- геометрия ----------
+const _zTAU = Math.PI * 2;
+const _zAng = k => -Math.PI / 2 + _zTAU * (k + 0.5) / ZIB_SHAPE_N;
+const _zPhi = a => a + Math.PI / 2;
+
+function _zRadial(cx, cy, rf) {
+    const p = new Float64Array(ZIB_SHAPE_N * 2);
+    for (let k = 0; k < ZIB_SHAPE_N; k++) {
+        const a = _zAng(k), r = rf(a, k);
+        p[2 * k] = cx + r * Math.cos(a);
+        p[2 * k + 1] = cy + r * Math.sin(a);
+    }
+    return p;
+}
+
+function _zCentroid(poly) {
+    let A = 0, cx = 0, cy = 0;
+    for (let i = 0; i < poly.length; i++) {
+        const [x0, y0] = poly[i], [x1, y1] = poly[(i + 1) % poly.length];
+        const f = x0 * y1 - x1 * y0;
+        A += f; cx += (x0 + x1) * f; cy += (y0 + y1) * f;
+    }
+    if (Math.abs(A) < 1e-9) {
+        return [poly.reduce((s, q) => s + q[0], 0) / poly.length, poly.reduce((s, q) => s + q[1], 0) / poly.length];
+    }
+    return [cx / (3 * A), cy / (3 * A)];
+}
+
+function _zRayCast(poly, c) {
+    const out = new Float64Array(ZIB_SHAPE_N);
+    for (let k = 0; k < ZIB_SHAPE_N; k++) {
+        const a = _zAng(k), dx = Math.cos(a), dy = Math.sin(a);
+        let best = 0;
+        for (let i = 0; i < poly.length; i++) {
+            const [ax, ay] = poly[i], [bx, by] = poly[(i + 1) % poly.length];
+            const ex = bx - ax, ey = by - ay;
+            const den = dx * ey - dy * ex;
+            if (Math.abs(den) < 1e-12) continue;
+            const t = ((ax - c[0]) * ey - (ay - c[1]) * ex) / den;
+            const s = ((ax - c[0]) * dy - (ay - c[1]) * dx) / den;
+            if (t > 0 && s >= -1e-9 && s <= 1 + 1e-9 && t > best) best = t;
+        }
+        out[k] = best;
+    }
+    return out;
+}
+
+function _zSmooth(r, sigma) {
+    if (!sigma) return r;
+    const R = Math.ceil(sigma * 3), w = [];
+    let sum = 0;
+    for (let i = -R; i <= R; i++) { const v = Math.exp(-(i * i) / (2 * sigma * sigma)); w.push(v); sum += v; }
+    const out = new Float64Array(r.length);
+    for (let k = 0; k < r.length; k++) {
+        let s = 0;
+        for (let i = -R; i <= R; i++) s += r[(k + i + r.length * 4) % r.length] * w[i + R];
+        out[k] = s / sum;
+    }
+    return out;
+}
+
+function _zScaleRadial(p, fn) {
+    const poly = [];
+    for (let i = 0; i < ZIB_SHAPE_N; i++) poly.push([p[2 * i], p[2 * i + 1]]);
+    const [cx, cy] = _zCentroid(poly), out = new Float64Array(p.length);
+    for (let k = 0; k < ZIB_SHAPE_N; k++) {
+        const f = fn(_zAng(k));
+        out[2 * k] = cx + (p[2 * k] - cx) * f;
+        out[2 * k + 1] = cy + (p[2 * k + 1] - cy) * f;
+    }
+    return out;
+}
+
+const _zFromPoly = (poly, sigma = 0) => {
+    const c = _zCentroid(poly);
+    const r = _zSmooth(_zRayCast(poly, c), sigma);
+    return _zRadial(c[0], c[1], (a, k) => r[k]);
+};
+
+function _zStar(n, ro, ri, radii) {
+    const poly = [];
+    for (let i = 0; i < n * 2; i++) {
+        const phi = Math.PI * i / n;
+        const r = i % 2 === 0 ? (radii ? radii[(i / 2) % radii.length] : ro) : ri;
+        poly.push([r * Math.sin(phi), -r * Math.cos(phi)]);
+    }
+    return poly;
+}
+
+function _zDistPoly(px, py, poly, sign) {
+    let best = Infinity, inside = poly.length >= 3;
+    for (let i = 0; i < poly.length; i++) {
+        const [ax, ay] = poly[i], [bx, by] = poly[(i + 1) % poly.length];
+        const ex = bx - ax, ey = by - ay, l2 = ex * ex + ey * ey;
+        const t = l2 ? Math.max(0, Math.min(1, ((px - ax) * ex + (py - ay) * ey) / l2)) : 0;
+        const dx = px - (ax + t * ex), dy = py - (ay + t * ey);
+        best = Math.min(best, Math.hypot(dx, dy));
+        if (inside && (ex * (py - ay) - ey * (px - ax)) * sign < -1e-12) inside = false;
+    }
+    return inside ? 0 : best;
+}
+
+function _zRounded(inner, rho) {
+    let area = 0;
+    for (let i = 0; i < inner.length; i++) {
+        const [x0, y0] = inner[i], [x1, y1] = inner[(i + 1) % inner.length];
+        area += x0 * y1 - x1 * y0;
+    }
+    const sign = area >= 0 ? 1 : -1, c = _zCentroid(inner);
+    return _zRadial(c[0], c[1], a => {
+        const dx = Math.cos(a), dy = Math.sin(a);
+        let lo = 0, hi = 6;
+        for (let i = 0; i < 26; i++) {
+            const mid = (lo + hi) / 2;
+            if (_zDistPoly(c[0] + dx * mid, c[1] + dy * mid, inner, sign) > rho + 1e-9) hi = mid; else lo = mid;
+        }
+        return (lo + hi) / 2;
+    });
+}
+
+function _zCircles(r0, circles, sx = 1, sy = 1) {
+    return _zRadial(0, 0, a => {
+        const phi = _zPhi(a);
+        let r = r0;
+        for (const { ang, d, rho } of circles) {
+            const al = phi - ang, s = d * Math.sin(al), disc = rho * rho - s * s;
+            if (disc >= 0) r = Math.max(r, d * Math.cos(al) + Math.sqrt(disc));
+        }
+        return r;
+    }).map((v, i) => i % 2 === 0 ? v * sx : v * sy);
+}
+
+const _zRegular = (n, r, phase = 0) => Array.from({ length: n }, (_, i) => {
+    const phi = phase + _zTAU * i / n;
+    return [r * Math.sin(phi), -r * Math.cos(phi)];
+});
+const _zSuper = (a, n) => Math.pow(Math.pow(Math.abs(Math.cos(a)), n) + Math.pow(Math.abs(Math.sin(a)), n), -1 / n);
+const _zCookie = (n, amp, phase = 0) => _zRadial(0, 0, a => 1 + amp * Math.cos(n * (_zPhi(a) - phase)));
+const _zBump = (a, center, width) => Math.exp(-Math.pow((a - center) / width, 2));
+const _zClamp01 = v => Math.max(0, Math.min(1, v));
+
+function _zPixels(cols, rows, filled) {
+    const cx = cols / 2, cy = rows / 2;
+    return _zRadial(cx, cy, a => {
+        const dx = Math.cos(a), dy = Math.sin(a);
+        let t = 0;
+        while (t < Math.max(cols, rows)) {
+            const x = Math.floor(cx + dx * (t + 0.02)), y = Math.floor(cy + dy * (t + 0.02));
+            if (x < 0 || y < 0 || x >= cols || y >= rows || !filled(x, y)) break;
+            t += 0.02;
+        }
+        return t;
+    });
+}
+
+// ---------- 35 фигур ----------
+const ZIB_SHAPES = {
+    circle:        { name: 'Circle',         build: () => _zRadial(0, 0, () => 1) },
+    square:        { name: 'Square',         build: () => _zRadial(0, 0, a => _zSuper(a, 4.4)) },
+    slanted:       { name: 'Slanted',        build: () => _zRounded([[-0.46, -0.42], [0.54, -0.42], [0.46, 0.42], [-0.54, 0.42]], 0.42) },
+    arch: { name: 'Arch', build: () => {
+        const inner = [];
+        for (let i = 0; i <= 14; i++) { const t = Math.PI + Math.PI * i / 14; inner.push([0.72 * Math.cos(t), 0.72 * Math.sin(t)]); }
+        inner.push([0.72, 0.72], [-0.72, 0.72]);
+        return _zRounded(inner, 0.28);
+    } },
+    semicircle: { name: 'Semicircle', build: () => {
+        const inner = [];
+        for (let i = 0; i <= 14; i++) { const t = Math.PI + Math.PI * i / 14; inner.push([0.78 * Math.cos(t), 0.78 * Math.sin(t)]); }
+        return _zRounded(inner, 0.22);
+    } },
+    oval: { name: 'Oval', build: () => {
+        const rot = -0.72, A = 1, B = 0.68;
+        return _zRadial(0, 0, a => { const al = a - rot; return A * B / Math.hypot(B * Math.cos(al), A * Math.sin(al)); });
+    } },
+    pill:          { name: 'Pill',           build: () => _zRounded([[-0.2, 0.2], [0.2, -0.2]], 0.72) },
+    triangle:      { name: 'Triangle',       build: () => _zRounded(_zRegular(3, 0.62), 0.24) },
+    arrow: { name: 'Arrow', build: () =>
+        _zScaleRadial(_zRounded(_zRegular(3, 0.5), 0.4), a => 1 - 0.26 * _zBump(a, Math.PI / 2, 0.42))
+    },
+    fan: { name: 'Fan', build: () => {
+        const inner = [[0, 0.78]];
+        for (let i = 0; i <= 14; i++) { const t = -Math.PI / 2 + (Math.PI / 2) * i / 14; inner.push([0.78 * Math.cos(t), 0.78 + 0.78 * Math.sin(t)]); }
+        return _zRounded(inner, 0.22);
+    } },
+    diamond:       { name: 'Diamond',        build: () => _zRounded([[0, -0.52], [0.36, 0], [0, 0.52], [-0.36, 0]], 0.32) },
+    clamshell:     { name: 'Clamshell',      build: () => _zRounded([[-0.6, 0], [-0.3, -0.3], [0.3, -0.3], [0.6, 0], [0.3, 0.3], [-0.3, 0.3]], 0.3) },
+    pentagon:      { name: 'Pentagon',       build: () => _zRounded(_zRegular(5, 0.58), 0.3) },
+    gem:           { name: 'Gem',            build: () => _zRounded([[0.02, -0.7], [0.62, -0.26], [0.5, 0.42], [-0.06, 0.7], [-0.52, 0.4], [-0.6, -0.26]], 0.28) },
+    verySunny:     { name: 'Very sunny',     build: () => _zRadial(0, 0, a => 0.8 + 0.2 * Math.pow((Math.cos(8 * _zPhi(a)) + 1) / 2, 0.4)) },
+    sunny:         { name: 'Sunny',          build: () => _zFromPolyStar(8, 1, 0.8, 2.6) },
+    cookie4:       { name: '4-sided cookie', build: () => _zCookie(4, 0.15, Math.PI / 4) },
+    cookie6:       { name: '6-sided cookie', build: () => _zCookie(6, 0.075) },
+    cookie7:       { name: '7-sided cookie', build: () => _zCookie(7, 0.07) },
+    cookie9:       { name: '9-sided cookie', build: () => _zCookie(9, 0.06) },
+    cookie12:      { name: '12-sided cookie', build: () => _zCookie(12, 0.065) },
+    clover4:       { name: '4-leaf clover',  build: () => _zCircles(0.35, [1, 3, 5, 7].map(i => ({ ang: Math.PI * i / 4, d: 0.42, rho: 0.58 }))) },
+    clover8:       { name: '8-leaf clover',  build: () => _zCircles(0.5, Array.from({ length: 8 }, (_, i) => ({ ang: _zTAU * i / 8, d: 0.64, rho: 0.37 }))) },
+    burst:         { name: 'Burst',          build: () => _zFromPolyStar(12, 1, 0.68, 0) },
+    softBurst:     { name: 'Soft burst',     build: () => _zFromPolyStar(12, 1, 0.76, 5) },
+    boom:          { name: 'Boom',           build: () => _zFromPolyStar(15, 1, 0.36, 0) },
+    softBoom:      { name: 'Soft boom',      build: () => _zRadial(0, 0, a => 0.4 + 0.6 * Math.pow(Math.abs(Math.cos(8 * _zPhi(a))), 0.5)) },
+    flower: { name: 'Flower', build: () => _zFromPoly(_zStar(8, 1, 0.45, [1, 0.8]), 5) },
+    puffy:         { name: 'Puffy',          build: () => _zCircles(0.7, Array.from({ length: 10 }, (_, i) => ({ ang: _zTAU * i / 10, d: 0.7, rho: 0.28 })), 1, 0.82) },
+    puffyDiamond:  { name: 'Puffy diamond',  build: () => _zCircles(0.5, [
+        ...[0, 1, 2, 3].map(i => ({ ang: Math.PI * i / 2, d: 0.64, rho: 0.36 })),
+        ...[0, 1, 2, 3].map(i => ({ ang: Math.PI / 4 + Math.PI * i / 2, d: 0.55, rho: 0.2 }))
+    ]) },
+    ghostish: { name: 'Ghost-ish', build: () => {
+        const inner = [];
+        for (let i = 0; i <= 14; i++) { const t = Math.PI + Math.PI * i / 14; inner.push([0.7 * Math.cos(t), 0.7 * Math.sin(t) - 0.1]); }
+        inner.push([0.7, 0.6], [-0.7, 0.6]);
+        return _zScaleRadial(_zRounded(inner, 0.3), a => 1 - 0.3 * _zBump(a, Math.PI / 2, 0.38));
+    } },
+    pixelCircle: { name: 'Pixel circle', build: () => _zPixels(11, 11, (x, y) => Math.hypot(x + 0.5 - 5.5, y + 0.5 - 5.5) <= 5.4) },
+    pixelTriangle: { name: 'Pixel triangle', build: () => _zPixels(10, 15, (x, y) => x < Math.round(10 * (1 - Math.abs(y + 0.5 - 7.5) / 8))) },
+    bun: { name: 'Bun', build: () => {
+        const top = [[-0.55, -0.47], [0.55, -0.47]], bottom = [[-0.55, 0.47], [0.55, 0.47]];
+        const a = _zRounded(top, 0.47), b = _zRounded(bottom, 0.47);
+        return _zSmoothPts(_zUnionPts(a, b), 2.2);
+    } },
+    heart: { name: 'Heart', build: () => {
+        const poly = [];
+        for (let i = 0; i < 400; i++) {
+            const t = _zTAU * i / 400;
+            poly.push([16 * Math.pow(Math.sin(t), 3), -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))]);
+        }
+        return _zFromPoly(poly, 2.2);
+    } }
+};
+
+function _zFromPolyStar(n, ro, ri, sigma) { return _zFromPoly(_zStar(n, ro, ri), sigma); }
+
+const _zToPoly = p => Array.from({ length: ZIB_SHAPE_N }, (_, i) => [p[2 * i], p[2 * i + 1]]);
+
+function _zUnionPts(pa, pb) {
+    const ra = _zRayCast(_zToPoly(pa), [0, 0]), rb = _zRayCast(_zToPoly(pb), [0, 0]);
+    return _zRadial(0, 0, (a, k) => Math.max(ra[k], rb[k]));
+}
+
+function _zSmoothPts(p, sigma) {
+    const r = _zSmooth(_zRayCast(_zToPoly(p), [0, 0]), sigma);
+    return _zRadial(0, 0, (a, k) => r[k]);
+}
+
+function _zNormalize(p) {
+    const poly = []; for (let i = 0; i < ZIB_SHAPE_N; i++) poly.push([p[2 * i], p[2 * i + 1]]);
+    const [cx, cy] = _zCentroid(poly);
+    let maxR = 0;
+    for (const [x, y] of poly) maxR = Math.max(maxR, Math.hypot(x - cx, y - cy));
+    const s = 46 / maxR, out = new Float64Array(p.length);
+    for (let i = 0; i < ZIB_SHAPE_N; i++) {
+        out[2 * i] = 50 + (p[2 * i] - cx) * s;
+        out[2 * i + 1] = 50 + (p[2 * i + 1] - cy) * s;
+    }
+    return out;
+}
+
+const _zShapeCache = {};
+function zibShapePoints(id) {
+    if (!_zShapeCache[id]) _zShapeCache[id] = _zNormalize(ZIB_SHAPES[id].build());
+    return _zShapeCache[id];
+}
+
+function zibShapePath(points) {
+    let d = 'M';
+    for (let i = 0; i < ZIB_SHAPE_N; i++) d += (i ? 'L' : '') + points[2 * i].toFixed(1) + ' ' + points[2 * i + 1].toFixed(1);
+    return d + 'Z';
+}
+
+// ---------- анимация ----------
+const _zEaseOutBack = t => { const c1 = 1.25, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+const _zLoaderIds = () => ZIB_LOADER_SHAPES === 'all' ? Object.keys(ZIB_SHAPES) : ZIB_LOADER_SHAPES.filter(id => ZIB_SHAPES[id]);
+
+function zibLoaderPathAt(now) {
+    const ids = _zLoaderIds(), period = ZIB_LOADER_HOLD_MS + ZIB_LOADER_MORPH_MS;
+    const step = Math.floor(now / period), local = now % period;
+    const from = zibShapePoints(ids[step % ids.length]);
+    if (local < ZIB_LOADER_HOLD_MS) return zibShapePath(from);
+    const to = zibShapePoints(ids[(step + 1) % ids.length]);
+    const e = _zEaseOutBack((local - ZIB_LOADER_HOLD_MS) / ZIB_LOADER_MORPH_MS);
+    const mid = new Float64Array(from.length);
+    for (let i = 0; i < mid.length; i++) mid[i] = from[i] + (to[i] - from[i]) * e;
+    return zibShapePath(mid);
+}
+
+let _zLoaderRunning = false, _zLoaderIdle = 0, _zLoaderLastD = '';
+
+function _zLoaderTick(now) {
+    const nodes = document.querySelectorAll('.zib-loader path');
+    if (!nodes.length) {
+        if (++_zLoaderIdle > 90) { _zLoaderRunning = false; return; }
+    } else _zLoaderIdle = 0;
+    const d = zibLoaderPathAt(now);
+    if (d !== _zLoaderLastD) { _zLoaderLastD = d; nodes.forEach(n => n.setAttribute('d', d)); }
+    requestAnimationFrame(_zLoaderTick);
+}
+
+function zibLoaderStart() {
+    if (_zLoaderRunning) return;
+    _zLoaderRunning = true; _zLoaderIdle = 0;
+    requestAnimationFrame(_zLoaderTick);
+}
+
+function zibLoader(size = '2.5rem', extraClass = '') {
+    zibLoaderStart();
+    const d = _zLoaderLastD || zibLoaderPathAt(performance.now());
+    return `<span class="zib-loader ${extraClass}" style="--zib-loader-size:${size}" role="status" aria-label="Загрузка"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="${d}"/></svg></span>`;
+}
+
+function zibLoaderWarmUp() {
+    const ids = _zLoaderIds().slice();
+    const next = () => { const id = ids.shift(); if (id) { zibShapePoints(id); setTimeout(next, 30); } };
+    next();
+}
+
+if (typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', () => { zibLoaderStart(); setTimeout(zibLoaderWarmUp, 400); });
+}
+
 let currentThemeMode = 'dark';
 let currentThemeColor = '#8C694D';
 
@@ -712,7 +1044,7 @@ async function loadHomeData() {
             slider.innerHTML = data.items.slice(0, 15).map(movie => createMovieCard(movie, true)).join('');
         }
     } catch (err) {
-        slider.innerHTML = `<div class="text-sm text-m3-outline py-10">Ошибка загрузки</div>`;
+        slider.innerHTML = `<div class="text-sm text-m3-outline flex items-center">${zibLoader('1.4rem', 'zib-loader-inline')}Загрузка новинок...</div>`;
     }
 }
 
@@ -840,8 +1172,7 @@ async function loadPopularTop100() {
 
     resetPopularState();
 
-    grid.innerHTML = `<div class="col-span-full text-center py-10"><i class="fa-solid fa-spinner fa-spin text-m3-primary text-2xl"></i><span class="ml-3 text-m3-outline text-sm block mt-2">Сбор данных</span></div>`;
-
+    grid.innerHTML = `<div class="col-span-full text-center py-10">${zibLoader('2.75rem')}<span class="ml-3 text-m3-outline text-sm block mt-2">Сбор данных...</span></div>`;
     try {
         const items = await fetchPopularBatch(100);
 
@@ -868,10 +1199,10 @@ async function loadMorePopular() {
     const btn = document.getElementById('popular-load-more-btn');
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Загрузка...`;
+        btn.innerHTML = `${zibLoader('1.1em', 'zib-loader-inline')} Загрузка...`;
     }
 
-    try {
+  try {
         const items = await fetchPopularBatch(100);
         const grid = document.getElementById('movies-grid-container');
 
@@ -1240,8 +1571,7 @@ function renderProfileView() {
     const input = 'w-full px-4 py-3 rounded-2xl bg-m3-surfaceContainerLow border border-m3-outlineVariant/40 text-m3-onSurface text-sm outline-none focus:border-m3-primary transition-colors';
     const err = m => (profileError && profileMode === m) ? `<p class="pf-error text-sm text-red-400">${esc(profileError)}</p>` : '';
     const busy = m => (profileBusy && profileMode === m) ? 'opacity-60 pointer-events-none' : '';
-    const spin = m => (profileBusy && profileMode === m) ? '<i class="fa-solid fa-spinner fa-spin mr-2"></i>' : '';
-
+    const spin = m => (profileBusy && profileMode === m) ? zibLoader('1.1em', 'zib-loader-inline') : '';
     // 1) только что создан аккаунт — показываем токен
     if (kind === 'fresh') {
         box.innerHTML = `<div class="${card} ${enter} space-y-5 text-center">
@@ -1383,7 +1713,7 @@ function osIcon(os) {
 function renderSessionsBlock() {
     let body;
     if (sessionsState === 'loading' && !sessionsList.length) {
-        body = '<div class="text-center py-6 text-m3-outline text-sm"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Загрузка сеансов…</div>';
+      body = `<div class="text-center py-6 text-m3-outline text-sm">${zibLoader('1.3rem', 'zib-loader-inline')}Загрузка сеансов…</div>`;
     } else if (sessionsState === 'error') {
         body = '<div class="text-center py-4 text-sm text-red-400">Не удалось загрузить сеансы.</div>';
     } else {
@@ -1633,8 +1963,8 @@ async function executeDirectSearch() {
     const grid = document.getElementById('search-grid-container');
     const countLabel = document.getElementById('search-results-count');
 
-    grid.innerHTML = `<div class="col-span-full text-center py-10"><i class="fa-solid fa-spinner fa-spin text-m3-primary text-2xl"></i><span class="ml-3 text-m3-outline text-sm block mt-2">Поиск по запросу «${query}»...</span></div>`;
-    countLabel.innerText = 'Поиск...';
+  grid.innerHTML = `<div class="col-span-full text-center py-10">${zibLoader('2.75rem')}<span class="ml-3 text-m3-outline text-sm block mt-2">Поиск по запросу «${query}»...</span></div>`;
+  countLabel.innerText = 'Поиск...';
 
     try {
         const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword?keyword=${encodeURIComponent(query)}&page=1`, { headers: API_HEADERS });
@@ -1683,7 +2013,7 @@ async function openMoviePlayer(kpId) {
     document.getElementById('current-player-kp-id').innerText = kpId;
     document.getElementById('player-movie-title').innerText = 'Загрузка информации...';
     document.getElementById('player-movie-description').innerText = '';
-    document.getElementById('player-movie-meta').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-m3-primary"></i>';
+    document.getElementById('player-movie-meta').innerHTML = zibLoader('1.5rem');
     document.getElementById('meta-bg-blur').style.backgroundImage = 'none';
 
     // постер: миниатюра сразу, чтобы блок не прыгал
@@ -1700,10 +2030,10 @@ async function openMoviePlayer(kpId) {
     const wrapper = document.getElementById('player-wrapper');
     if (wrapper) {
         wrapper.innerHTML = `
-            <div class="absolute inset-0 flex flex-col items-center justify-center text-m3-outline gap-3 bg-black">
-                <i class="fa-solid fa-circle-notch fa-spin text-3xl"></i>
-                <span class="text-xs">Подключение медиа...</span>
-            </div>
+          <div class="absolute inset-0 flex flex-col items-center justify-center text-m3-outline gap-3 bg-black">
+              ${zibLoader('3rem')}
+              <span class="text-xs">Подключение медиа...</span>
+          </div>
         `;
     }
 

@@ -229,3 +229,32 @@ button:not(:disabled):active { scale: .96; }
     transition: transform .3s cubic-bezier(.2, .8, .2, 1);
 }
 .zib-modal.is-open .zib-modal-box { transform: none; }
+
+/* ===== Material You Expressive: индикатор загрузки (морфящиеся фигуры) ===== */
+.zib-loader {
+    --zib-loader-size: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: var(--zib-loader-size);
+    height: var(--zib-loader-size);
+    color: rgb(var(--m3-primary));
+    vertical-align: middle;
+}
+.zib-loader svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    animation: zib-loader-spin 4.2s linear infinite;
+}
+.zib-loader path { fill: currentColor; }
+
+.zib-loader-inline {
+    color: inherit;
+    margin-right: .5rem;
+    vertical-align: -0.2em;
+}
+
+@keyframes zib-loader-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .zib-loader svg { animation: none; } }

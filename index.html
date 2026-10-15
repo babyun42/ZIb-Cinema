@@ -142,7 +142,9 @@
                     <button onclick="scrollSlider('home-popular-slider', -1)" class="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 sm:w-10 sm:h-10 bg-black/80 hover:bg-m3-primary hover:text-m3-onPrimary rounded-full text-white slider-arrow hidden md:flex items-center justify-center backdrop-blur-md border border-white/10 shadow-lg cursor-pointer"><i class="fa-solid fa-chevron-left text-sm sm:text-base"></i></button>
 
                     <div class="fade-slider flex overflow-x-auto gap-4 p-8 -m-8 hide-scrollbar snap-x snap-mandatory scroll-smooth" id="home-popular-slider">
-                        <div class="text-sm text-m3-outline"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Загрузка новинок...</div>
+                        <div class="text-sm text-m3-outline flex items-center">
+                            <span class="zib-loader zib-loader-inline" style="--zib-loader-size:1.4rem" role="status" aria-label="Загрузка"><svg viewBox="0 0 100 100" aria-hidden="true"><path d=""/></svg></span>Загрузка новинок...
+                        </div>
                     </div>
 
                     <button onclick="scrollSlider('home-popular-slider', 1)" class="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 sm:w-10 sm:h-10 bg-black/80 hover:bg-m3-primary hover:text-m3-onPrimary rounded-full text-white slider-arrow hidden md:flex items-center justify-center backdrop-blur-md border border-white/10 shadow-lg cursor-pointer"><i class="fa-solid fa-chevron-right text-sm sm:text-base"></i></button>
@@ -247,7 +249,7 @@
             <div class="bg-m3-surfaceContainer rounded-3xl p-1 sm:p-2 border border-m3-outlineVariant/30 shadow-2xl">
                 <div class="relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-inner group" id="player-wrapper">
                     <div class="absolute inset-0 flex flex-col items-center justify-center text-m3-outline gap-3">
-                        <i class="fa-solid fa-circle-notch fa-spin text-3xl"></i>
+                        <span class="zib-loader" style="--zib-loader-size:3rem" role="status" aria-label="Загрузка"><svg viewBox="0 0 100 100" aria-hidden="true"><path d=""/></svg></span>
                         <span class="text-xs">Загрузка медиапотока...</span>
                     </div>
                 </div>
