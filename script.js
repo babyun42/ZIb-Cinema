@@ -7,7 +7,7 @@ const SLIDER_FADE_EXTRA_BOTTOM = 10;
 
 // ===== Информация о сайте =====
 const SITE_INFO_TITLE = 'О сайте';
-const SITE_INFO_TEXT = `Zib Cinema — просто сайт для просмотра фильмов.
+const SITE_INFO_TEXT = `Zib Cinema — просто сайт для просмотра фильмов
 
 Делал этот сайт потому что не было удобных решений для меня и я хотел сделать что то прикольное в стиле Material you
 
