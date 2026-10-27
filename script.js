@@ -2133,7 +2133,7 @@ function setPlayerMode(mode) {
     } else if (mode === 'external_sspoisk') {
         const isSeries = ['TV_SERIES', 'MINI_SERIES', 'TV_SHOW'].includes(activeMovieType);
         const route = isSeries ? 'series' : 'film';
-        iframeSrc = `https://kinokino.win/${route}/${activeMovieId}/`;
+        iframeSrc = `https://fixtyflux.cfd/${route}/${activeMovieId}/`;
     } else if (mode === 'external_gokino') {
         iframeSrc = `https://matrix.gokino.by/search.php?q=${activeMovieId}`;
     }
