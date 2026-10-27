@@ -1,0 +1,260 @@
+:root {
+    --m3-primary-hex: #8C694D;
+    --m3-surface: 23 21 19;
+    --m3-surface-dim: 20 18 16;
+    --m3-surface-bright: 50 46 42;
+    --m3-surface-container-lowest: 16 14 13;
+    --m3-surface-container-low: 28 25 23;
+    --m3-surface-container: 34 30 28;
+    --m3-surface-container-high: 44 39 36;
+    --m3-surface-container-highest: 54 48 44;
+    --m3-on-surface: 226 220 214;
+    --m3-secondary: 195 184 175;
+    --m3-on-secondary: 50 44 39;
+    --m3-outline: 148 138 130;
+    --m3-outline-variant: 70 64 59;
+    --m3-primary: 205 178 156;
+    --m3-on-primary: 58 42 28;
+    --m3-primary-container: 85 64 47;
+    --m3-on-primary-container: 236 222 210;
+}
+
+html {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--m3-outline-variant)) rgb(var(--m3-surface-container-low));
+}
+
+body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    background-color: rgb(var(--m3-surface));
+    color: rgb(var(--m3-on-surface));
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgb(var(--m3-surface-container-low)); }
+::-webkit-scrollbar-thumb { background: rgb(var(--m3-outline-variant)); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--m3-outline)); }
+
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-down { animation: fadeInDown 0.2s ease-out forwards; }
+
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.view-anim.view-enter-right { opacity: 0; transform: translateX(28px); }
+.view-anim.view-enter-left { opacity: 0; transform: translateX(-28px); }
+
+body::selection, body *::selection {
+    background-color: rgb(var(--m3-primary-container)) !important;
+    color: rgb(var(--m3-on-primary-container)) !important;
+}
+
+/* ===== Анимации интерфейса ===== */
+/* плавные переходы и «нажатие» для всех кнопок (кроме стрелок слайдера и сердечек, у них свои) */
+button:not(.slider-arrow):not(.fav-btn) {
+    transition: color .2s ease, background-color .2s ease, border-color .2s ease, box-shadow .2s ease,
+                opacity .2s ease, transform .2s ease, scale .15s ease !important;
+}
+button:not(:disabled):active { scale: .96; }
+.slider-arrow:active { scale: .9; }
+
+/* карточки фильмов: лёгкий подъём при наведении и «нажатие» */
+@media (hover: hover) { [data-mid]:hover { transform: translateY(-3px); } }
+[data-mid]:active { transform: scale(.98); }
+
+@keyframes pfIn { from { opacity: 0; transform: translateY(12px) scale(.985); } to { opacity: 1; transform: none; } }
+.pf-enter { animation: pfIn .4s cubic-bezier(.2,.8,.2,1) both; }
+
+@keyframes favPop { 0% { transform: scale(1); } 40% { transform: scale(1.45); } 100% { transform: scale(1); } }
+.fav-pop { display: inline-block; animation: favPop .4s ease; }
+
+/* переключатель «Создать аккаунт / Войти» */
+.pf-seg-pill { transition: transform .38s cubic-bezier(.4, 0, .2, 1); }
+#profile-guest[data-mode="login"] .pf-seg-pill { transform: translateX(100%); }
+.pf-seg-btn { color: rgb(var(--m3-secondary)); font-weight: 500; }
+#profile-guest[data-mode="create"] .pf-seg-create,
+#profile-guest[data-mode="login"] .pf-seg-login { color: rgb(var(--m3-on-primary-container)); font-weight: 700; }
+.pf-panel { grid-area: 1 / 1; transition: opacity .3s ease, transform .38s cubic-bezier(.4, 0, .2, 1), visibility .3s; }
+#profile-guest[data-mode="create"] .pf-panel-login { opacity: 0; visibility: hidden; pointer-events: none; transform: translateX(28px); }
+#profile-guest[data-mode="login"] .pf-panel-create { opacity: 0; visibility: hidden; pointer-events: none; transform: translateX(-28px); }
+
+.pf-leave { opacity: 0; transform: translateX(28px); max-height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; margin: 0 !important; overflow: hidden; border-width: 0 !important; transition: all .3s ease; }
+
+/* ===== Подсветка вкладок шапки при наведении (Material 3 state layer) ===== */
+.nav-tab-btn { position: relative; }
+.nav-tab-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: currentColor;
+    opacity: 0;
+    transition: opacity .2s ease;
+    pointer-events: none;
+}
+.nav-tab-btn:hover::before { opacity: .09; }
+.nav-tab-btn:active::before { opacity: .14; }
+.nav-tab-btn.is-active-tab:hover { color: rgb(var(--m3-on-primary-container)); }
+.nav-tab-btn:not(.is-active-tab):hover { color: rgb(var(--m3-on-surface)); }
+
+/* ===== Избранное: сердечко на карточке ===== */
+.fav-btn { opacity: 0; transition: opacity .2s ease, transform .15s ease; }
+.group:hover .fav-btn, .fav-btn.is-fav, .fav-btn:focus-visible { opacity: 1; }
+.fav-btn:active { transform: scale(.85); }
+@media (hover: none) { .fav-btn { opacity: 1; } }
+
+/* ===== Оптимизация длинных сеток (Популярное / Поиск) ===== */
+/* Браузер не рисует и не считает вёрстку карточек, которых сейчас не видно на экране */
+.grid-card {
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto 340px; /* примерная высота до первого показа, потом запоминается реальная */
+}
+
+/* ===== Плавное затухание обложек по краям слайдера ===== */
+/* Раньше затухание делалось маской на самом слайдере — вместе с hover-эффектами и размытием оно
+   мигало. Теперь это обычные градиенты поверх краёв, только с анимацией opacity. */
+.slider-fade {
+    position: absolute;
+    top: 0;      /* точные top и height выставляет JS (updateSliderFade) по реальным карточкам */
+    height: 100%;
+    width: 4rem;
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .25s ease;
+}
+.slider-fade.is-on { opacity: 1; }
+.slider-fade-l {
+    left: -2rem;
+    background: linear-gradient(to right, rgb(var(--m3-surface)) 0%, rgb(var(--m3-surface) / .65) 45%, rgb(var(--m3-surface) / 0) 100%);
+}
+.slider-fade-r {
+    right: -2rem;
+    background: linear-gradient(to left, rgb(var(--m3-surface)) 0%, rgb(var(--m3-surface) / .65) 45%, rgb(var(--m3-surface) / 0) 100%);
+}
+
+/* ===== Кнопки перемотки: полупрозрачные, проявляются при приближении мыши ===== */
+.slider-arrow {
+    opacity: 0; /* показываются только когда курсор над строкой слайдера (см. initSliderArrows) */
+    transition: opacity .15s ease-out, background-color .3s ease, color .3s ease;
+}
+
+/* ===== Мобильная шапка: название активной вкладки (плавное появление) ===== */
+.nav-label {
+    display: inline-block;
+    max-width: 0;
+    margin-left: 0;
+    opacity: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: max-width .35s cubic-bezier(.4,0,.2,1), margin-left .35s cubic-bezier(.4,0,.2,1), opacity .3s ease;
+}
+.nav-tab-btn.is-active-tab .nav-label {
+    max-width: 8rem;
+    margin-left: .5rem;
+    opacity: 1;
+}
+@media (min-width: 640px) {
+    .nav-tab-btn .nav-label { max-width: none; margin-left: .5rem; opacity: 1; transition: none; }
+    .nav-tab-btn .nav-label-mobile-only { display: none; }
+}
+
+/* ===== Отключаемая подсветка вкладок шапки (Настройки → Интерфейс) ===== */
+.no-nav-hover .nav-tab-btn:hover::before,
+.no-nav-hover .nav-tab-btn:active::before { opacity: 0; }
+/* Настройка выключена: фоновая «пилюля» не появляется,
+   но текст всё равно чуть подсвечивается — мягче, чем при включённой настройке */
+.no-nav-hover .nav-tab-btn:not(.is-active-tab):hover { color: rgb(var(--m3-on-surface) / .99); }
+
+/* ===== Переключатель (switch) в стиле Material You ===== */
+.zib-switch {
+    position: relative;
+    width: 52px;
+    height: 30px;
+    border-radius: 9999px;
+    border: 2px solid rgb(var(--m3-outline));
+    background: rgb(var(--m3-surface-container-highest));
+    cursor: pointer;
+}
+.zib-switch::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 4px;
+    width: 14px;
+    height: 14px;
+    margin-top: -7px;
+    border-radius: 50%;
+    background: rgb(var(--m3-outline));
+    transition: transform .28s cubic-bezier(.2, .8, .2, 1), width .2s ease, height .2s ease, margin-top .2s ease, background-color .2s ease;
+}
+.zib-switch[aria-checked="true"] { background: rgb(var(--m3-primary)); border-color: rgb(var(--m3-primary)); }
+.zib-switch[aria-checked="true"]::after {
+    width: 20px;
+    height: 20px;
+    margin-top: -10px;
+    transform: translateX(22px);
+    background: rgb(var(--m3-on-primary));
+}
+.zib-switch:active::after { width: 22px; }
+
+/* ===== Кнопка «убрать из истории» на карточке ===== */
+.hist-remove-btn { opacity: 0; }
+.group:hover .hist-remove-btn, .hist-remove-btn:focus-visible { opacity: 1; }
+@media (hover: none) { .hist-remove-btn { opacity: 1; } }
+
+/* ===== Модальные окна (постер, информация о сайте) ===== */
+.zib-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(0, 0, 0, .78);
+    backdrop-filter: blur(6px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .25s ease, visibility .25s;
+}
+.zib-modal.is-open { opacity: 1; visibility: visible; }
+.zib-modal-box {
+    transform: scale(.94) translateY(10px);
+    transition: transform .3s cubic-bezier(.2, .8, .2, 1);
+}
+.zib-modal.is-open .zib-modal-box { transform: none; }
+
+/* ===== Material You Expressive: индикатор загрузки (морфящиеся фигуры) ===== */
+.zib-loader {
+    --zib-loader-size: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: var(--zib-loader-size);
+    height: var(--zib-loader-size);
+    color: rgb(var(--m3-primary));
+    vertical-align: middle;
+}
+.zib-loader svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    animation: zib-loader-spin 4.2s linear infinite;
+}
+.zib-loader path { fill: currentColor; }
+
+.zib-loader-inline {
+    color: inherit;
+    margin-right: .5rem;
+    vertical-align: -0.2em;
+}
+
+@keyframes zib-loader-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .zib-loader svg { animation: none; } }
