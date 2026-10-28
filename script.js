@@ -1,5 +1,5 @@
 
-const BACKEND_URL = 'https://zib-cinema.xyz';
+const BACKEND_URL = 'https://zib-cinema.xyz:8443';
 
 // ===== Настройки внешнего вида =====
 const SLIDER_FADE_EXTRA_TOP = 10;
