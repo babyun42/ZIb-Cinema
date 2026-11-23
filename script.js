@@ -1041,6 +1041,7 @@ async function loadHomeData() {
         const data = await res.json();
 
         if (data.items && data.items.length > 0) {
+            rememberPopular(data.items);
             slider.innerHTML = data.items.slice(0, 15).map(movie => createMovieCard(movie, true)).join('');
         }
     } catch (err) {
@@ -1124,6 +1125,7 @@ async function fetchPopularBatch(minItems = 100) {
                 const id = movie.kinopoiskId || movie.filmId;
                 if (!id || popularSeen.has(id)) return;
                 popularSeen.add(id);
+                rememberPopular([movie]);
                 out.push(movie);
                 gotAny = true;
             });
@@ -1522,7 +1524,7 @@ function removeFromFavoritesGrid(id) {
     setTimeout(finish, 280);
 }
 
-function renderCollections() {
+function renderFavoritesTab() {
     const grid = document.getElementById('favorites-grid');
     const count = document.getElementById('favorites-count');
     if (!grid) return;
@@ -1877,17 +1879,314 @@ function scrollSlider(sliderId, direction) {
     }
 }
 
+// ================= УМНЫЙ ПОИСК =================
+// Что умеет:
+//  • находит фильм, даже если в слове ошибка («илюзия обмана» → «Иллюзия обмана») или оно не дописано;
+//  • если запрос с ошибкой ничего не дал, пробует исправленные варианты и ищет среди уже загруженных фильмов;
+//  • когда совсем ничего не нашлось — показывает популярное;
+//  • помнит ответы, поэтому повторный ввод не тратит запросы к API.
+
+const SEARCH_MIN_SCORE = 0.5;        // ниже этой «похожести» результат из API не показываем
+const SEARCH_LOCAL_MIN_SCORE = 0.62; // для фильмов из уже загруженных списков порог строже
+const SEARCH_STRONG_SCORE = 0.85;    // при такой похожести дальше можно не искать
+const SEARCH_LIVE_REQUESTS = 3;      // сколько запросов к API можно потратить на подсказки под полем
+const SEARCH_FULL_REQUESTS = 5;      // и на страницу результатов
+const SEARCH_CACHE_TTL_MS = 10 * 60 * 1000;
+const SEARCH_FALLBACK_COUNT = 5;     // сколько популярных показывать, если ничего не нашлось
+
+const popularPool = [];              // популярные фильмы, которые уже загружали (для поиска и запасного показа)
+const popularPoolIds = new Set();
+const searchCache = new Map();
+const searchInflight = new Map();
+let searchSeq = 0;                   // номер последнего запроса: старые ответы не должны перебивать новые
+let directSearchSeq = 0;
+let popularFallbackLoad = null;
+
+function rememberPopular(movies) {
+    for (const movie of movies || []) {
+        const id = movieIdOf(movie);
+        if (!id || popularPoolIds.has(id) || popularPool.length >= 400) continue;
+        popularPoolIds.add(id);
+        popularPool.push(movie);
+    }
+}
+
+const movieIdOf = movie => String((movie && (movie.kinopoiskId || movie.filmId)) || '');
+
+// «Ёлка!» → «елка»: нижний регистр, ё = е, без знаков препинания и лишних пробелов
+function normalizeQuery(text) {
+    return String(text || '')
+        .toLowerCase()
+        .replace(/ё/g, 'е')
+        .replace(/[^\p{L}\p{N}]+/gu, ' ')
+        .trim();
+}
+
+// Сколько правок (вставить, удалить, заменить букву) нужно, чтобы из одной строки получить другую
+function levenshtein(a, b) {
+    if (a === b) return 0;
+    if (!a.length) return b.length;
+    if (!b.length) return a.length;
+    let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+        const cur = [i];
+        for (let j = 1; j <= b.length; j++) {
+            const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+            cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
+        }
+        prev = cur;
+    }
+    return prev[b.length];
+}
+
+// Похожесть строк от 0 до 1
+function similarity(a, b) {
+    const longest = Math.max(a.length, b.length);
+    return longest ? 1 - levenshtein(a, b) / longest : 1;
+}
+
+// Похожесть одного слова запроса на одно слово названия
+function wordSimilarity(queryWord, titleWord) {
+    if (queryWord.length >= 3 && titleWord.startsWith(queryWord)) return 0.95; // слово не дописано
+    let score = similarity(queryWord, titleWord);
+    if (queryWord.length >= 4 && titleWord.length > queryWord.length) {
+        // недописанное слово с опечаткой: сравниваем с началом слова такой же длины
+        score = Math.max(score, similarity(queryWord, titleWord.slice(0, queryWord.length)) * 0.9);
+    }
+    return score;
+}
+
+function titleScore(queryNorm, queryWords, title) {
+    const t = normalizeQuery(title);
+    if (!t) return 0;
+    const titleWords = t.split(' ');
+
+    // 1) вся фраза целиком (или её начало, если название длиннее)
+    let phrase = similarity(queryNorm, t);
+    if (t.startsWith(queryNorm)) phrase = Math.max(phrase, 0.97);
+    else if (t.length > queryNorm.length) phrase = Math.max(phrase, similarity(queryNorm, t.slice(0, queryNorm.length)) * 0.92);
+
+    // 2) слово за словом; длинные слова весят больше коротких
+    let sum = 0, weight = 0;
+    for (const qw of queryWords) {
+        let best = 0;
+        for (const tw of titleWords) best = Math.max(best, wordSimilarity(qw, tw));
+        sum += best * qw.length;
+        weight += qw.length;
+    }
+    const words = weight ? sum / weight : 0;
+
+    const score = words * 0.65 + phrase * 0.35;
+    return t === queryNorm ? Math.min(1, score + 0.05) : score;
+}
+
+// Насколько фильм подходит под запрос (0..1 и чуть выше за популярность)
+function movieScore(movie, queryNorm, queryWords) {
+    if (!queryNorm) return 0;
+    let best = 0;
+    for (const title of [movie.nameRu, movie.nameEn, movie.nameOriginal]) {
+        if (title) best = Math.max(best, titleScore(queryNorm, queryWords, title));
+    }
+    if (best === 0) return 0;
+
+    // при равной похожести выше стоит тот, кто популярнее
+    const votes = Number(movie.ratingVoteCount) || 0;
+    const rating = parseFloat(movie.ratingKinopoisk ?? movie.rating) || 0;
+    const bonus = votes ? Math.log10(1 + votes) / 6 * 0.08 : rating / 10 * 0.03;
+    return best + bonus;
+}
+
+function rankFilms(films, queryNorm, queryWords, minScore) {
+    return films
+        .map(film => ({ film, score: movieScore(film, queryNorm, queryWords) }))
+        .filter(item => item.score >= minScore)
+        .sort((a, b) => b.score - a.score);
+}
+
+// Варианты запроса по порядку: сначала как набрано, потом исправленные
+function buildSearchVariants(raw) {
+    const norm = normalizeQuery(raw);
+    const words = norm.split(' ').filter(Boolean);
+    const variants = [];
+    const add = text => {
+        text = text.trim();
+        if (text.length >= 2 && !variants.includes(text)) variants.push(text);
+    };
+
+    add(raw.trim());   // как набрано
+    add(norm);         // без ё, знаков и лишних пробелов
+
+    const longestFirst = [...words].sort((a, b) => b.length - a.length);
+    if (words.length > 1) {
+        add(words.slice(0, -1).join(' '));  // последнее слово могло быть не дописано
+        longestFirst.slice(0, 2).forEach(add); // самые длинные слова по отдельности
+    }
+
+    const main = longestFirst[0];
+    if (main) {
+        // самая частая ошибка: одна согласная вместо двух («илюзия» → «иллюзия»)
+        let doubled = 0;
+        for (const letter of 'лнстрм') {
+            const at = main.indexOf(letter);
+            if (at !== -1 && main[at + 1] !== letter && main[at - 1] !== letter && doubled < 2) {
+                add(main.slice(0, at + 1) + letter + main.slice(at + 1));
+                doubled++;
+            }
+        }
+        if (main.length >= 6) add(main.slice(0, -2)); // ошибка или недопечатанное окончание
+    }
+    return variants;
+}
+
+async function fetchSearchPage(keyword) {
+    const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword?keyword=${encodeURIComponent(keyword)}&page=1`, { headers: API_HEADERS });
+    if (!res.ok) throw new Error('Search failed');
+    const data = await res.json();
+    return data.films || [];
+}
+
+// Всё, что уже загружалось на сайте: популярное, карточки, история, избранное
+function localSearchPool() {
+    const all = new Map();
+    const add = movie => {
+        const id = movieIdOf(movie);
+        if (id && !all.has(id)) all.set(id, movie);
+    };
+    popularPool.forEach(add);
+    movieRegistry.forEach(add);
+    getHistory().forEach(add);
+    favorites.forEach(add);
+    return [...all.values()];
+}
+
+// Ищет фильмы. Возвращает { films, strong, fuzzy }:
+//  strong — есть почти точное совпадение, fuzzy — набранное слово было с ошибкой и показано похожее
+async function searchFilms(query, maxRequests = SEARCH_FULL_REQUESTS) {
+    const queryNorm = normalizeQuery(query);
+    const cached = searchCache.get(queryNorm);
+    if (cached && Date.now() - cached.at < SEARCH_CACHE_TTL_MS && (cached.result.strong || cached.budget >= maxRequests)) {
+        return cached.result;
+    }
+
+    const key = queryNorm + '|' + maxRequests;
+    if (searchInflight.has(key)) return searchInflight.get(key);
+
+    const job = runSearch(query, queryNorm, maxRequests).then(result => {
+        searchCache.set(queryNorm, { at: Date.now(), budget: maxRequests, result });
+        if (searchCache.size > 60) searchCache.delete(searchCache.keys().next().value);
+        return result;
+    }).finally(() => searchInflight.delete(key));
+
+    searchInflight.set(key, job);
+    return job;
+}
+
+async function runSearch(query, queryNorm, maxRequests) {
+    const queryWords = queryNorm.split(' ').filter(Boolean);
+    const variants = buildSearchVariants(query).slice(0, maxRequests);
+    const found = new Map();
+    let answered = 0;      // сколько запросов к API ответили
+    let typedFound = 0;    // сколько фильмов дал запрос в том виде, как его набрали
+
+    // первая пачка — запрос как набрали, дальше по два варианта за раз
+    const batches = [variants.slice(0, 1)];
+    for (let i = 1; i < variants.length; i += 2) batches.push(variants.slice(i, i + 2));
+
+    for (let b = 0; b < batches.length; b++) {
+        const results = await Promise.allSettled(batches[b].map(fetchSearchPage));
+        for (const r of results) {
+            if (r.status !== 'fulfilled') continue;
+            answered++;
+            for (const film of r.value) {
+                const id = movieIdOf(film);
+                if (id && !found.has(id)) found.set(id, film);
+            }
+        }
+        if (b === 0) typedFound = found.size;
+
+        const ranked = rankFilms([...found.values()], queryNorm, queryWords, SEARCH_MIN_SCORE);
+        if (ranked.length && ranked[0].score >= SEARCH_STRONG_SCORE) break; // хорошее совпадение — хватит
+    }
+
+    // добавляем подходящее из уже загруженных списков (работает и когда API недоступен)
+    const apiRanked = rankFilms([...found.values()], queryNorm, queryWords, SEARCH_MIN_SCORE);
+    const localRanked = rankFilms(localSearchPool(), queryNorm, queryWords, SEARCH_LOCAL_MIN_SCORE);
+
+    if (!apiRanked.length && !localRanked.length && answered === 0) throw new Error('Search failed');
+
+    const merged = new Map();
+    for (const item of [...apiRanked, ...localRanked]) {
+        const id = movieIdOf(item.film);
+        if (!merged.has(id) || merged.get(id).score < item.score) merged.set(id, item);
+    }
+    const top = [...merged.values()].sort((a, b) => b.score - a.score).slice(0, 20);
+
+    return {
+        films: top.map(item => item.film),
+        strong: top.length > 0 && top[0].score >= SEARCH_STRONG_SCORE,
+        fuzzy: top.length > 0 && (typedFound === 0 || top[0].score < 0.9)
+    };
+}
+
+// Популярное на случай, когда ничего не найдено: сначала самое похожее на запрос, остальное по популярности
+async function getPopularFallback(query) {
+    if (!popularPool.length) {
+        if (!popularFallbackLoad) {
+            popularFallbackLoad = fetch('https://kinopoiskapiunofficial.tech/api/v2.2/films/collections?type=TOP_POPULAR_ALL&page=1', { headers: API_HEADERS })
+                .then(res => res.json())
+                .then(data => rememberPopular(data.items))
+                .catch(() => {})
+                .finally(() => { popularFallbackLoad = null; });
+        }
+        await popularFallbackLoad;
+    }
+
+    const queryNorm = normalizeQuery(query);
+    const queryWords = queryNorm.split(' ').filter(Boolean);
+    const close = rankFilms(popularPool, queryNorm, queryWords, 0.35).map(item => item.film);
+    const rest = popularPool.filter(movie => !close.includes(movie));
+    return [...close, ...rest].slice(0, SEARCH_FALLBACK_COUNT);
+}
+
+// ---------- подсказки под полем поиска ----------
+function suggestionNote(text) {
+    return `<div class="text-[11px] text-m3-outline px-3 pt-2 pb-1">${esc(text)}</div>`;
+}
+
+function suggestionRow(film) {
+    const id = movieIdOf(film);
+    const name = esc(film.nameRu || film.nameEn || film.nameOriginal || 'Неизвестно');
+    const year = esc(film.year || '');
+    const rating = parseFloat(film.ratingKinopoisk ?? film.rating);
+    const ratingHtml = rating ? `<span class="text-amber-300 font-bold px-1 rounded bg-amber-400/10">★ ${rating}</span>` : '';
+    const poster = film.posterUrlPreview || film.posterUrl || `https://st.kp.yandex.net/images/film_big/${id}.jpg`;
+
+    return `
+        <button onclick="openMoviePlayer('${id}')" class="w-full text-left p-2 hover:bg-m3-surfaceContainerHighest transition-colors flex items-center gap-3 rounded-xl animate-fade-in-down cursor-pointer">
+            <img src="${esc(poster)}" class="w-10 h-14 object-cover rounded bg-m3-surfaceContainerLowest" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='${fallbackPoster}'">
+            <div class="flex-grow min-w-0">
+                <div class="text-xs sm:text-sm font-bold text-m3-onSurface truncate">${name}</div>
+                <div class="text-[10px] text-m3-outline flex items-center gap-2 mt-0.5">
+                    <span>${year}</span> ${ratingHtml}
+                </div>
+            </div>
+        </button>
+    `;
+}
+
 function handleLiveSearch(query) {
     query = query.trim();
     const container = document.getElementById('suggestions-container');
-    const icon = document.getElementById('search-btn-icon');
+    const seq = ++searchSeq;
 
     if (!query) {
+        clearTimeout(searchDebounceTimer);
+        setSearchBusy(false);
         container.innerHTML = '<div class="text-xs text-m3-outline p-3 text-center">Начните вводить название...</div>';
         return;
     }
 
-    icon.className = 'fa-solid fa-spinner fa-spin';
+    setSearchBusy(true);
 
     clearTimeout(searchDebounceTimer);
     searchDebounceTimer = setTimeout(async () => {
@@ -1905,41 +2204,39 @@ function handleLiveSearch(query) {
                 return;
             }
 
-            const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword?keyword=${encodeURIComponent(query)}&page=1`, { headers: API_HEADERS });
-            if (!res.ok) throw new Error('Search failed');
-            const data = await res.json();
+            if (normalizeQuery(query).length < 2) {
+                container.innerHTML = '<div class="text-xs text-m3-outline p-3 text-center">Введите ещё пару букв...</div>';
+                return;
+            }
 
-            if (data.films && data.films.length > 0) {
-                const topResults = data.films.slice(0, 5);
-                container.innerHTML = topResults.map((film, index) => {
-                    const name = film.nameRu || film.nameEn || 'Неизвестно';
-                    const year = film.year || '';
-                    const rating = film.rating ? `<span class="text-amber-300 font-bold px-1 rounded bg-amber-400/10">★ ${film.rating}</span>` : '';
+            const result = await searchFilms(query, SEARCH_LIVE_REQUESTS);
+            if (seq !== searchSeq) return; // пока искали, запрос уже изменили
 
-                    return `
-                        <button onclick="openMoviePlayer('${film.filmId}')" class="w-full text-left p-2 hover:bg-m3-surfaceContainerHighest transition-colors flex items-center gap-3 rounded-xl animate-fade-in-down cursor-pointer" style="animation-delay: ${index * 50}ms">
-                            <img src="${film.posterUrlPreview || film.posterUrl}" class="w-10 h-14 object-cover rounded bg-m3-surfaceContainerLowest" referrerpolicy="no-referrer" onerror="this.src='${fallbackPoster}'">
-                            <div class="flex-grow min-w-0">
-                                <div class="text-xs sm:text-sm font-bold text-m3-onSurface truncate">${name}</div>
-                                <div class="text-[10px] text-m3-outline flex items-center gap-2 mt-0.5">
-                                    <span>${year}</span> ${rating}
-                                </div>
-                            </div>
-                        </button>
-                    `;
-                }).join('');
+            if (result.films.length > 0) {
+                const note = result.fuzzy ? suggestionNote('Возможно, вы искали:') : '';
+                container.innerHTML = note + result.films.slice(0, 5).map(suggestionRow).join('');
+                return;
+            }
+
+            const popular = await getPopularFallback(query);
+            if (seq !== searchSeq) return;
+
+            if (popular.length > 0) {
+                container.innerHTML = suggestionNote('Ничего не нашли. Возможно, вам понравится из популярного:') + popular.map(suggestionRow).join('');
             } else {
                 container.innerHTML = '<div class="text-xs text-m3-outline p-3 text-center">Ничего не найдено</div>';
             }
         } catch (err) {
+            if (seq !== searchSeq) return;
             console.error('Search API error:', err);
             container.innerHTML = '<div class="text-xs text-red-400 p-3 text-center">Ошибка сети.</div>';
         } finally {
-            icon.className = 'fa-solid fa-arrow-right';
+            if (seq === searchSeq) setSearchBusy(false);
         }
     }, 500);
 }
 
+// ---------- страница результатов ----------
 async function executeDirectSearch() {
     const query = document.getElementById('search-input').value.trim();
     document.getElementById('search-suggestions').classList.add('hidden');
@@ -1959,34 +2256,366 @@ async function executeDirectSearch() {
 
     switchNavTab('search');
 
+    const seq = ++directSearchSeq;
     document.getElementById('search-query-label').innerText = query;
     const grid = document.getElementById('search-grid-container');
     const countLabel = document.getElementById('search-results-count');
 
-  grid.innerHTML = `<div class="col-span-full text-center py-10">${zibLoader('2.75rem')}<span class="ml-3 text-m3-outline text-sm block mt-2">Поиск по запросу «${query}»...</span></div>`;
-  countLabel.innerText = 'Поиск...';
+    grid.innerHTML = `<div class="col-span-full text-center py-10">${zibLoader('2.75rem')}<span class="ml-3 text-m3-outline text-sm block mt-2">Поиск по запросу «${esc(query)}»...</span></div>`;
+    countLabel.innerText = 'Поиск...';
 
     try {
-        const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword?keyword=${encodeURIComponent(query)}&page=1`, { headers: API_HEADERS });
-        if (!res.ok) throw new Error('Search failed');
-        const data = await res.json();
+        const result = await searchFilms(query, SEARCH_FULL_REQUESTS);
+        if (seq !== directSearchSeq) return;
 
-        if (data.films && data.films.length > 0) {
-            grid.innerHTML = data.films.map(movie => createMovieCard(movie, false)).join('');
-            countLabel.innerText = `Найдено: ${data.films.length}`;
-        } else {
-            grid.innerHTML = `<div class="col-span-full text-center py-12 text-m3-outline text-sm"><i class="fa-solid fa-magnifying-glass text-3xl mb-3 block"></i>По запросу «${query}» ничего не найдено.</div>`;
-            countLabel.innerText = '0 результатов';
+        if (result.films.length > 0) {
+            const note = result.fuzzy
+                ? `<div class="col-span-full text-sm text-m3-secondary">Точных совпадений нет, показано похожее на «${esc(query)}».</div>`
+                : '';
+            grid.innerHTML = note + result.films.map(movie => createMovieCard(movie, false)).join('');
+            countLabel.innerText = `Найдено: ${result.films.length}`;
+            return;
         }
+
+        const popular = await getPopularFallback(query);
+        if (seq !== directSearchSeq) return;
+
+        const notFound = `<div class="col-span-full text-center py-12 text-m3-outline text-sm"><i class="fa-solid fa-magnifying-glass text-3xl mb-3 block"></i>По запросу «${esc(query)}» ничего не найдено.</div>`;
+        const suggest = popular.length > 0
+            ? `<div class="col-span-full text-sm text-m3-secondary">Возможно, вам понравится из популярного:</div>` + popular.map(movie => createMovieCard(movie, false)).join('')
+            : '';
+        grid.innerHTML = notFound + suggest;
+        countLabel.innerText = '0 результатов';
     } catch (err) {
+        if (seq !== directSearchSeq) return;
         console.error('Search error:', err);
         grid.innerHTML = `<div class="col-span-full text-center py-10 text-red-400 text-sm">Ошибка при загрузке результатов поиска.</div>`;
         countLabel.innerText = 'Ошибка';
     }
 }
 
+// ================= ПРОДОЛЖЕНИЯ, ПОХОЖИЕ ФИЛЬМЫ И «ПОДБОРКА» =================
+// Продолжения/приквелы и похожие фильмы показываются внизу страницы фильма.
+// «Подборка» во вкладке «Подборки» собирается из похожих на то, что вы добавили в избранное.
+
+const RECOMMEND_SOURCES = 12;        // по скольким последним избранным строим подборку
+const RECOMMEND_SHOW = 20;           // сколько фильмов показывать сразу (остальные — по кнопке)
+const RECOMMEND_MAX = 60;            // сколько всего держим в подборке
+const RELATED_SHOW = 10;             // сколько похожих показывать сразу на странице фильма
+const SIMILARS_TTL_MS = 7 * 24 * 60 * 60 * 1000; // «похожие» меняются редко — храним неделю
+const SIMILARS_STORED_MAX = 40;      // сколько фильмов помнить между визитами
+
+const similarsCache = new Map();     // id -> { at, items }
+const similarsInflight = new Map();
+const sequelsCache = new Map();
+let collectionsTab = localStorage.getItem('zibCollectionsTab') === 'favorites' ? 'favorites' : 'recommendations';
+let recommendState = { sig: '', html: '' };
+let recommendSeq = 0;
+
+// «похожие» запоминаем и между визитами, чтобы не тратить лимит API
+try {
+    const stored = JSON.parse(localStorage.getItem('zibSimilars') || '{}');
+    for (const [id, entry] of Object.entries(stored)) {
+        if (entry && Date.now() - entry.at < SIMILARS_TTL_MS) similarsCache.set(id, entry);
+    }
+} catch { /* битые данные — просто начнём с нуля */ }
+
+function saveSimilarsStore() {
+    const newest = [...similarsCache.entries()].sort((a, b) => b[1].at - a[1].at).slice(0, SIMILARS_STORED_MAX);
+    try { localStorage.setItem('zibSimilars', JSON.stringify(Object.fromEntries(newest))); } catch { /* нет места */ }
+}
+
+// Ответ API -> объект, который понимает createMovieCard
+function normalizeRelated(item) {
+    return {
+        kinopoiskId: item.filmId || item.kinopoiskId,
+        nameRu: item.nameRu || '',
+        nameOriginal: item.nameOriginal || item.nameEn || '',
+        posterUrlPreview: item.posterUrlPreview || '',
+        relationType: item.relationType || ''
+    };
+}
+
+async function getSimilars(id) {
+    id = String(id);
+    const cached = similarsCache.get(id);
+    if (cached && Date.now() - cached.at < SIMILARS_TTL_MS) return cached.items;
+    if (similarsInflight.has(id)) return similarsInflight.get(id);
+
+    const job = (async () => {
+        const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.2/films/${id}/similars`, { headers: API_HEADERS });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        const items = (data.items || []).map(normalizeRelated).filter(m => m.kinopoiskId && String(m.kinopoiskId) !== id);
+        similarsCache.set(id, { at: Date.now(), items });
+        saveSimilarsStore();
+        return items;
+    })().finally(() => similarsInflight.delete(id));
+
+    similarsInflight.set(id, job);
+    return job;
+}
+
+async function getSequels(id) {
+    id = String(id);
+    if (sequelsCache.has(id)) return sequelsCache.get(id);
+    const res = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.1/films/${id}/sequels_and_prequels`, { headers: API_HEADERS });
+    if (res.status === 404) return [];  // связанных частей нет
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const list = (Array.isArray(data) ? data : data.items || []).map(normalizeRelated).filter(m => m.kinopoiskId && String(m.kinopoiskId) !== id);
+    sequelsCache.set(id, list);
+    return list;
+}
+
+// Выполняет fn для каждого элемента, но не больше limit одновременно (чтобы не упереться в лимит API)
+async function mapLimit(items, limit, fn) {
+    const results = new Array(items.length);
+    let next = 0;
+    const worker = async () => {
+        while (next < items.length) {
+            const i = next++;
+            results[i] = await fn(items[i], i);
+        }
+    };
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+    return results;
+}
+
+// ---------- общие куски разметки ----------
+function sectionHeading(icon, text) {
+    return `<h3 class="text-lg font-bold text-m3-onSurface flex items-center gap-3">
+        <span class="w-9 h-9 rounded-2xl bg-m3-primaryContainer text-m3-onPrimaryContainer flex items-center justify-center shadow-sm"><i class="${icon} text-sm"></i></span>${text}
+    </h3>`;
+}
+
+// Сетка карточек: первые `limit` видны, остальные раскрываются кнопкой. caption(movie) — подпись под карточкой
+function movieGrid(movies, limit, caption) {
+    const cells = movies.map((movie, i) => `
+        <div class="min-w-0${i >= limit ? ' hidden' : ''}"${i >= limit ? ' data-more' : ''}>
+            ${createMovieCard(movie, false)}
+            ${caption ? `<div class="text-[10px] text-m3-outline mt-1.5 px-1 truncate">${esc(caption(movie))}</div>` : ''}
+        </div>`).join('');
+    const more = movies.length > limit
+        ? `<button onclick="revealMore(this)" class="mx-auto block px-5 py-2 rounded-full bg-m3-surfaceContainerHigh hover:bg-m3-surfaceContainerHighest text-m3-onSurface text-xs font-bold border border-m3-outlineVariant/40 cursor-pointer">Показать все (${movies.length})</button>`
+        : '';
+    return `<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-5">${cells}</div>${more ? `<div class="pt-4">${more}</div>` : ''}`;
+}
+
+function revealMore(btn) {
+    const section = btn.closest('[data-reveal-root]') || btn.parentElement.parentElement;
+    section.querySelectorAll('[data-more]').forEach(el => el.classList.remove('hidden'));
+    btn.parentElement.remove();
+}
+
+// ---------- внизу страницы фильма ----------
+const RELATION_GROUPS = [['SEQUEL', 'Продолжения'], ['PREQUEL', 'Предыстории'], ['REMAKE', 'Ремейки']];
+
+function relatedBox() {
+    let box = document.getElementById('player-related');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'player-related';
+        box.className = 'space-y-8 pt-4';
+        document.getElementById('player-view').appendChild(box);
+    }
+    return box;
+}
+
+async function loadRelatedMovies(kpId) {
+    kpId = String(kpId);
+    const box = relatedBox();
+    box.innerHTML = '';
+
+    const [sequelsResult, similarsResult] = await Promise.allSettled([getSequels(kpId), getSimilars(kpId)]);
+    if (String(activeMovieId) !== kpId) return; // пока грузилось, открыли другой фильм
+
+    let html = '';
+
+    const sequels = sequelsResult.status === 'fulfilled' ? sequelsResult.value : [];
+    if (sequels.length) {
+        const groups = RELATION_GROUPS.map(([type, label]) => [label, sequels.filter(m => m.relationType === type)]);
+        const known = RELATION_GROUPS.map(([type]) => type);
+        groups.push(['Связанные фильмы', sequels.filter(m => !known.includes(m.relationType))]);
+
+        const body = groups.filter(([, list]) => list.length).map(([label, list]) => `
+            <div class="space-y-3">
+                <div class="text-xs font-bold text-m3-outline uppercase tracking-wider">${label}</div>
+                ${movieGrid(list, RELATED_SHOW)}
+            </div>`).join('');
+        html += `<section data-reveal-root class="space-y-4 animate-fade-in-down">${sectionHeading('fa-solid fa-film', 'Продолжения и связанные части')}${body}</section>`;
+    }
+
+    const similars = similarsResult.status === 'fulfilled' ? similarsResult.value : [];
+    if (similars.length) {
+        html += `<section data-reveal-root class="space-y-4 animate-fade-in-down">${sectionHeading('fa-solid fa-clone', 'Похожие фильмы')}${movieGrid(similars, RELATED_SHOW)}</section>`;
+    }
+
+    box.innerHTML = html;
+}
+
+// ---------- вкладка «Подборки»: «Подборка» и «Избранное» ----------
+function ensureCollectionsUI() {
+    const section = document.getElementById('collections-view');
+    const grid = document.getElementById('favorites-grid');
+    if (!section || !grid) return null;
+
+    const favBlock = grid.parentElement === section ? grid : grid.parentElement;
+
+    let tabs = document.getElementById('collections-tabs');
+    if (!tabs) {
+        tabs = document.createElement('div');
+        tabs.id = 'collections-tabs';
+        tabs.className = 'relative flex p-1 rounded-full bg-m3-surfaceContainerLow border border-m3-outlineVariant/20 w-full max-w-sm';
+        tabs.innerHTML = `
+            <div id="collections-tab-pill" class="absolute top-1 bottom-1 left-1 rounded-full bg-m3-primaryContainer shadow-sm transition-transform duration-300 ease-out" style="width: calc(50% - 4px)"></div>
+            <button id="collections-tab-recommendations" onclick="setCollectionsTab('recommendations')" class="relative z-10 flex-1 py-2.5 rounded-full text-sm cursor-pointer">Подборка</button>
+            <button id="collections-tab-favorites" onclick="setCollectionsTab('favorites')" class="relative z-10 flex-1 py-2.5 rounded-full text-sm cursor-pointer">Избранное</button>`;
+        const head = section.firstElementChild;
+        if (head && head !== favBlock) head.after(tabs); else section.prepend(tabs);
+    }
+
+    let recBox = document.getElementById('recommendations-block');
+    if (!recBox) {
+        recBox = document.createElement('div');
+        recBox.id = 'recommendations-block';
+        recBox.className = 'space-y-4';
+        section.appendChild(recBox);
+    }
+    return { tabs, recBox, favBlock };
+}
+
+function setCollectionsTab(tab) {
+    collectionsTab = tab === 'favorites' ? 'favorites' : 'recommendations';
+    localStorage.setItem('zibCollectionsTab', collectionsTab);
+    renderCollections();
+}
+
+function renderCollections() {
+    const ui = ensureCollectionsUI();
+    if (!ui) return renderFavoritesTab(); // разметка без нужных блоков — работаем как раньше
+
+    const isRec = collectionsTab === 'recommendations';
+    document.getElementById('collections-tab-pill').style.transform = isRec ? 'translateX(0)' : 'translateX(100%)';
+    for (const [id, active] of [['collections-tab-recommendations', isRec], ['collections-tab-favorites', !isRec]]) {
+        const btn = document.getElementById(id);
+        btn.classList.toggle('text-m3-onPrimaryContainer', active);
+        btn.classList.toggle('font-bold', active);
+        btn.classList.toggle('text-m3-secondary', !active);
+        btn.classList.toggle('font-medium', !active);
+    }
+
+    const shown = isRec ? ui.recBox : ui.favBlock;
+    const hidden = isRec ? ui.favBlock : ui.recBox;
+    hidden.classList.add('hidden');
+    if (shown.classList.contains('hidden')) {
+        shown.classList.remove('hidden');
+        shown.classList.remove('animate-fade-in-down');
+        void shown.offsetWidth;
+        shown.classList.add('animate-fade-in-down');
+    }
+
+    if (isRec) renderRecommendations(ui.recBox); else renderFavoritesTab();
+}
+
+// Подборка: берём «похожие» к каждому избранному и считаем, что встречается чаще и выше в списках
+async function buildRecommendations() {
+    const sources = favorites.slice(0, RECOMMEND_SOURCES);
+    const lists = await mapLimit(sources, 3, src => getSimilars(src.kinopoiskId).catch(() => null));
+
+    const scores = new Map();
+    lists.forEach((items, rank) => {
+        if (!items) return;
+        const weight = 1 + 0.5 * (sources.length - rank) / sources.length; // свежие лайки важнее старых
+        const title = sources[rank].nameRu || sources[rank].nameOriginal || sources[rank].nameEn || '';
+        items.forEach((movie, idx) => {
+            const id = movieIdOf(movie);
+            if (!id || favIds.has(id)) return; // то, что уже в избранном, не предлагаем
+            const gain = weight * (1 - 0.6 * idx / items.length); // чем выше в списке «похожих», тем лучше
+            const entry = scores.get(id) || { movie, score: 0, best: 0, because: title };
+            entry.score += gain;
+            if (gain > entry.best) { entry.best = gain; entry.because = title; }
+            scores.set(id, entry);
+        });
+    });
+
+    return {
+        items: [...scores.values()].sort((a, b) => b.score - a.score).slice(0, RECOMMEND_MAX),
+        failed: lists.filter(l => !l).length,
+        total: sources.length
+    };
+}
+
+async function renderRecommendations(box) {
+    const note = (icon, text, extra = '') => `<div class="text-center py-12 px-6 bg-m3-surfaceContainerLow rounded-3xl border border-m3-outlineVariant/20 border-dashed space-y-3">
+        <i class="${icon} text-3xl text-m3-outline"></i>
+        <p class="text-sm text-m3-secondary">${text}</p>${extra}
+    </div>`;
+
+    if (!authUser) {
+        box.innerHTML = note('fa-solid fa-user-lock', 'Войдите в профиль: подборка строится из фильмов, которые вы лайкнули.',
+            `<button onclick="switchNavTab('profile')" class="px-5 py-2 rounded-full bg-m3-primary text-m3-onPrimary text-sm font-bold cursor-pointer">Открыть профиль</button>`);
+        return;
+    }
+    if (!favorites.length) {
+        box.innerHTML = note('fa-regular fa-heart', 'Лайкните несколько фильмов или сериалов, и здесь появится подборка похожих.');
+        return;
+    }
+
+    const sig = favorites.slice(0, RECOMMEND_SOURCES).map(m => m.kinopoiskId).join(',');
+    if (recommendState.sig === sig && recommendState.html) { // ничего не менялось — показываем готовое
+        box.innerHTML = recommendState.html;
+        return;
+    }
+
+    const seq = ++recommendSeq;
+    box.innerHTML = `<div class="text-center py-12">${zibLoader('2.75rem')}<div class="text-sm text-m3-outline mt-3">Подбираем фильмы по вашим лайкам...</div></div>`;
+
+    let result;
+    try {
+        result = await buildRecommendations();
+    } catch (err) {
+        result = { items: [], failed: 1, total: 1 };
+    }
+    if (seq !== recommendSeq || currentActiveTab !== 'collections' || collectionsTab !== 'recommendations') return;
+
+    if (!result.items.length) {
+        const broke = result.failed > 0;
+        box.innerHTML = note(broke ? 'fa-solid fa-triangle-exclamation' : 'fa-regular fa-face-meh',
+            broke ? 'Не удалось получить подборку. Проверьте соединение и попробуйте ещё раз.' : 'Пока нечего предложить: для ваших лайков не нашлось похожих.',
+            broke ? `<button onclick="recommendState = { sig: '', html: '' }; renderCollections()" class="px-5 py-2 rounded-full bg-m3-primary text-m3-onPrimary text-sm font-bold cursor-pointer">Повторить</button>` : '');
+        return;
+    }
+
+    const because = new Map(result.items.map(item => [movieIdOf(item.movie), item.because]));
+    const used = Math.min(favorites.length, RECOMMEND_SOURCES);
+    const html = `<div data-reveal-root class="space-y-4">
+        <p class="text-xs text-m3-outline">Подобрано по вашему избранному (${used}): фильмы и сериалы, похожие на лайкнутые.</p>
+        ${movieGrid(result.items.map(item => item.movie), RECOMMEND_SHOW, movie => 'Похоже на «' + because.get(movieIdOf(movie)) + '»')}
+    </div>`;
+
+    recommendState = { sig, html };
+    box.innerHTML = html;
+}
+
+// ---------- индикатор в поле поиска ----------
+function setSearchBusy(busy) {
+    const icon = document.getElementById('search-btn-icon');
+    if (!icon) return;
+    const loader = document.getElementById('search-btn-loader');
+    if (busy) {
+        if (!loader) icon.insertAdjacentHTML('beforebegin', `<span id="search-btn-loader" class="inline-flex">${zibLoader('1.15rem')}</span>`);
+        icon.classList.add('hidden');
+    } else {
+        if (loader) loader.remove();
+        icon.classList.remove('hidden');
+        icon.className = 'fa-solid fa-arrow-right';
+    }
+}
+
 async function openMoviePlayer(kpId) {
     kpId = String(kpId);
+    const wasPlayerVisible = isPlayerVisible();
     if (!isPlayerVisible()) {
         movieOpenedFromList = routeWritesEnabled;
         sessionStorage.setItem('zibBackTab', currentActiveTab === 'search' ? 'home' : currentActiveTab);
@@ -2026,6 +2655,11 @@ async function openMoviePlayer(kpId) {
     activeMovieId = kpId;
     activeMovieType = 'FILM';
     updatePlayerFavBtn();
+
+    // переход с одного фильма на другой (из «похожих») — возвращаемся к началу страницы
+    if (wasPlayerVisible) window.scrollTo({ top: 0, behavior: 'smooth' });
+    relatedBox().innerHTML = '';
+    loadRelatedMovies(kpId);
 
     const wrapper = document.getElementById('player-wrapper');
     if (wrapper) {
